@@ -10,20 +10,7 @@ Define the implementation of astro algorithm which are in modular form.
 #include <math.h>
 #include "myAstro.h"
 #include "symblc.const.h"
-/*
-// site location in "symblc.const.h"
-#define LOCAL_LONG	120.99209
-#define LOCAL_LAT	24.79431
 
-//#define LOCAL_LONG	121.5180	//Taipei, East,  
-//#define LOCAL_LAT	 25.09556
-
-//#define LOCAL_LONG	-16.5122
-//#define LOCAL_LAT	28.3003
-
-
-#define GmtOffSet	LOCAL_LONG *24.0/360.0
-*/
 /*
 //---------------------------------
 // Parameters associated with Time

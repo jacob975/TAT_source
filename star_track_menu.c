@@ -145,20 +145,6 @@ Changes log:
 
 //Speed of motor to move from origin to position
 
-/************************************************************/
-/*******  parameters for local observing site  **************/
-//THESE PAREMETERS ARE IN symblc.const.h
-/*
-//#define  LOCAL_LAT		 28.3003  //TF local latitude (in deg)
-//#define  LOCAL_LONG		-16.5122  //TF local longitude(in deg)
-#define  LOCAL_LAT		 38.4053  //UZ local latitude (in deg)
-#define  LOCAL_LONG		 66.5376  //UZ local longitude(in deg)
-//#define  LOCAL_LAT		 24.79	  //NTHU local latitude (in deg)
-//#define  LOCAL_LONG		121.0	  //NTHU local longitude(in deg)
-#define  LOCAL_UT		  0.0   //difference between system time and UT time
-#define	 GmtOffSet	LOCAL_LONG*24.0/360.0  // in hour
-*/
-
 #define SIDEREALSPEED		41.78079012//In Hz, for stepper motor
 #define MENUSTARLIST		1
 #define MENUUSERSTAR		2

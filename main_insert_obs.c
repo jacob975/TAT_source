@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 		printf("%s [start observation] [end observation] [RA] [DEC] [CCD temp] [Filter Sequence] [flat_flag] [Target_name]\n",argv[0]);
 		printf("######\nstart/end observation format = YYYYMMDDHHMM [ex. 201705272330]\n");
 		printf("RA format = HH:MM:SS [ex. 03:04:23]\nDEC format = +-DD:MM:SS [ex. 02:43:11]\n");
-		printf("Filter Sequence format = Filter1(expTime1)Filter2(expTime2)... [ex. N(10)V(30)R(40)]\n");
+		printf("Filter Sequence format = Filter1(expTime1)Filter2(expTime2)... [ex. 'N(10)V(30)R(40)']\n");
 		printf("Flat fag format = a or b or t or n [ex. a]\n####################\n");
 		return 1;
 	}

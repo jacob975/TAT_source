@@ -48,7 +48,6 @@ int DoGetObserveTime(float *setpoint, time_t *p_begin_time, time_t *p_end_time)
 		step(temp_string);
 		return 0;
 	}
-
 	while(!feof(fp) )
 	{
 		fgets(buf, BUFFER_SIZE, fp);

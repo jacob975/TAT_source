@@ -98,6 +98,20 @@ int check_input_file(void)
 				line, ANSI_COLOR_MAGENTA,ANSI_COLOR_RESET);
 			start = string2date(start_string);
 			end = string2date(end_string);
+			
+			//----------------------------------------------------
+			//WARNING if the timing for the latter observation is already past, but the targets are not observed yet.
+			if(now.timestamp > end.timestamp-HALFHOUR){
+				printf(
+					"%s End time (%s) already passed!\n",
+					warning_string,end_string);
+				//Set N
+				fsetpos(fin, fposition);
+				fseek(fin, 0, SEEK_CUR);
+				fputc('N', fin);
+				line--;
+				continue;
+			}		
 			//----------------------------------------------------
 			//Check the validity of a single observation schedule (the latter) 
 			new_error = check_single_line(
@@ -137,18 +151,6 @@ int check_input_file(void)
 					error_string,start_string);
 				Nerrors++;
 			}
-			//WARNING if the timing for the latter observation is already past, but the targets are not observed yet.
-			if(now.timestamp > end.timestamp-HALFHOUR){
-				printf(
-					"%s End time (%s) already passed!\n",
-					warning_string,end_string);
-				//Set N
-				fsetpos(fin, fposition);
-				fseek(fin, 0, SEEK_CUR);
-				fputc('N', fin);
-				line--;
-				continue;
-			}		
 			//Iterate to the next observation schedule.
 			prev_start_timestamp = start.timestamp;
 			prev_end_timestamp = end.timestamp;
@@ -428,8 +430,8 @@ int check_star_rise(DATE d, float ra)
 	
 	ut= convert2UT(d);
 	LST= (float)getLocalSidereal(ut);	
-	printf("Local Sidereal Time = %10.6f (hr)\n", LST);
-	printf("Right Ascention = %10.6f (hr)\n", ra);
+	//printf("Local Sidereal Time = %10.6f (hr)\n", LST);
+	//printf("Right Ascention = %10.6f (hr)\n", ra);
 	
 	hourAngle = LST - ra;
 	// WEST: positive

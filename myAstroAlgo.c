@@ -149,6 +149,46 @@ HORIZON Equator2Horizon(DATE d, EQUATOR equator)
 }
 
 
+EQUATOR Horizon2Equator(DATE d, HORIZON horizon)
+{
+	EQUATOR equator;
+	
+	double LST = getLocalSidereal(d)*15.0;		//LST in degree
+
+	//altitude
+	double sinAL = sin(horizon.altitude * DEG2RAD);
+	double cosAL = cos(horizon.altitude * DEG2RAD);
+
+	//azimuth
+	double sinAZ = sin(horizon.azimuth * DEG2RAD);
+	double cosAZ = cos(horizon.azimuth * DEG2RAD);
+
+	//geographic latitude of observer
+	double sinL = sin(LOCAL_LAT * DEG2RAD);
+	double cosL = cos(LOCAL_LAT * DEG2RAD);
+	
+	//declination
+	double sinD = sinAL * sinL + cosAL * cosL * cosAZ;
+	double cosD = cos(asin(sinD))
+	
+	//hour-angle to right ascention
+	double cosH = (sinAL - sinL * sinD)/(cosL * cosD);
+	double H' = acos(cosH) * RAD2DEG;
+	double H;
+
+	if (sinAZ < 0){
+		H = H';
+	}
+	else{
+		H = 360 - H';
+	}
+
+	equator.declination = asin(sinD) * RAD2DEG;
+	equator.ascension = LST - H;
+
+	return equator;
+}
+
 EQUATOR EquatorParallax (DATE d, EQUATOR equator)
 {
 	EQUATOR equatorParallax;

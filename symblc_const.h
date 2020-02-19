@@ -13,7 +13,7 @@
 
 #define  LOCAL_LAT		24.79  //Hsinchu local latitude (in deg)
 #define  LOCAL_LONG		121.0  //Hsinchu local longitude(in deg)
-#define  LOCAL_ALT		100.0  //Hsinchu local altitude (in meters)
+#define  LOCAL_ALT		120.0  //Hsinchu local altitude (in meters)
 #define  LOCAL_UT		  0.0   //difference between system time and UT time
 #define  SITE			"TW"	//short name for the site
 #define  OBSERVATORY		"HSINCHU" //long name for the observatory

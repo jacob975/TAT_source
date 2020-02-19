@@ -32,6 +32,7 @@ typedef struct {
 
 
 typedef struct {
+	//azimuth and altitude are measured in degree
 	double azimuth;
 	double altitude;
 }HORIZON;

@@ -238,7 +238,8 @@ int main(int argc,char* argv[])
 		diff_begin= now.timestamp - open.timestamp;
 		diff_end= close.timestamp - now.timestamp;
 
-		if(diff_begin>-5 && diff_end > 3600)
+		//if(diff_begin>-5 && diff_end > 3600)
+		if(diff_end > 300)
 		{
 			sprintf(temp_string,"Open Time (UT) = %4d/%02d/%02d %02d:%02d\n", 
 						open.yr,open.mon,open.day,open.hr,open.min);
@@ -836,14 +837,14 @@ int mv(DATE d, STARLIST star_pos, STARLIST Current_pos, float *ra_deg_mv, float 
 	sprintf(temp_string,"HourAngle= %12.6f, Dec=%12.6f", hourAngle_obj, dec_deg_obj);
 	step(temp_string);
 	
-	if(hourAngle_obj < MIN_ALTITUDE) 
+	if(hourAngle_obj < -MIN_ALTITUDE) 
 	{
 		sprintf(temp_string,"ERROR: HA = %f; Star has not risen yet! (<%.2fhr)", hourAngle_obj,MIN_ALTITUDE);
 		step(temp_string);
 	}
-	else if(hourAngle_obj >  5.0) // elevation 22 deg 
+	else if(hourAngle_obj >  MIN_ALTITUDE) // elevation 22 deg 
 	{
-		sprintf(temp_string,"ERROR: HA = %f; Star has already set! (>5.3hr)", hourAngle_obj);
+		sprintf(temp_string,"ERROR: HA = %f; Star has already set! (>%.2fhr)", hourAngle_obj, MIN_ALTITUDE);
 		step(temp_string);
 	}
 	else

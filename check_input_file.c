@@ -101,7 +101,7 @@ int check_input_file(void)
 			
 			//----------------------------------------------------
 			//WARNING if the timing for the latter observation is already past, but the targets are not observed yet.
-			if(now.timestamp > end.timestamp-HALFHOUR){
+			if(now.timestamp > end.timestamp-FIVEMINUTES){
 				printf(
 					"%s End time (%s) already passed!\n",
 					warning_string,end_string);

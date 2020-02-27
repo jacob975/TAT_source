@@ -7,19 +7,19 @@
 #undef TENERIFE
 #undef KUNMING
 
-#define HSINCHU // for configure.sh do not change
+#define TENERIFE // for configure.sh do not change
 
 #ifdef HSINCHU
 
-#define  LOCAL_LAT		24.79  //Hsinchu local latitude (in deg)
+#define  LOCAL_LAT		 24.79  //Hsinchu local latitude (in deg)
 #define  LOCAL_LONG		121.0  //Hsinchu local longitude(in deg)
-#define  LOCAL_ALT		120.0  //Hsinchu local altitude (in meters)
+#define  LOCAL_ALT		100.0  //Hsinchu local altitude (in meters)
 #define  LOCAL_UT		  0.0   //difference between system time and UT time
 #define  SITE			"TW"	//short name for the site
-#define  OBSERVATORY		"HSINCHU" //long name for the observatory
+#define  OBSERVATORY	"HSINCHU" //long name for the observatory
 
-#define PPC_DATA 		0xc0b0
-#define PWR_DATA 		0xc030
+#define PPC_DATA 		0xb000
+#define PWR_DATA 		0xb200
 
 #define MIN_ALTITUDE 5.3 //Minimum altitude to start observation
 #define F6
@@ -31,12 +31,12 @@
 #define  LOCAL_LAT		 28.3003  //TF local latitude (in deg)
 #define  LOCAL_LONG		-16.5122  //TF local longitude(in deg)
 #define  LOCAL_ALT		2390.0  //TF local altitude (in meters)
-#define  LOCAL_UT		0.0   //difference between system time and UT time
+#define  LOCAL_UT		  0.0   //difference between system time and UT time
 #define  SITE			"TF"	//short name for the sitey
-#define  OBSERVATORY		"TENERIFE" //long name for the observatory
+#define  OBSERVATORY	"TENERIFE" //long name for the observatory
 
-#define PPC_DATA 		0xc0b0
-#define PWR_DATA 		0xc030
+#define PPC_DATA 		0xc000
+#define PWR_DATA 		0xc200
 
 #define DUST_SENSOR
 #define F6
@@ -54,8 +54,8 @@
 #define  OBSERVATORY	"LI-JIANG" //long name for the observatory
 
 
-#define PPC_DATA 		0xc0b0
-#define PWR_DATA 		0xc030
+#define PPC_DATA 		0xb000
+#define PWR_DATA 		0xb200
 
 #define U6
 #define MIN_ALTITUDE -5.3 //Minimum altitude to start observation

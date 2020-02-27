@@ -164,7 +164,7 @@ int main(int argc,char* argv[])
 	steplog("***  OBSERVATION BEGINS  ***",STAR_TRACK_LOG_TYPE);
 // read position of reference
 	if(Current_pos.ra<0) //Current position is home switch
-	{
+	{ 
 		if((fin2=fopen(REF_PAR_FILENAME,"r"))==NULL)
 		{
 			sprintf(temp_string, "ERROR: Input file %s does not exist.",REF_PAR_FILENAME);
@@ -238,8 +238,9 @@ int main(int argc,char* argv[])
 		diff_begin= now.timestamp - open.timestamp;
 		diff_end= close.timestamp - now.timestamp;
 
-		//if(diff_begin>-5 && diff_end > 3600)
-		if(diff_end > 300)
+		if(diff_end < 0) break; // finish when the end time pass
+		
+		if(diff_begin>-5 && diff_end > 3600)
 		{
 			sprintf(temp_string,"Open Time (UT) = %4d/%02d/%02d %02d:%02d\n", 
 						open.yr,open.mon,open.day,open.hr,open.min);
@@ -319,7 +320,7 @@ int main(int argc,char* argv[])
 //			fsetpos(fin1, fposition);
 //			fseek(fin1, 0, SEEK_CUR);
 //			fputc('D', fin1);
-			break;
+// 			break;
 		}
 	}
 // 	free( fposition);
@@ -713,35 +714,34 @@ to have time process following procedure */
 					p_tat_info->obs_info.FOV = FOV_CORRECT;
 				}
 				
-/*				
-				if(p_tat_info->obs_info.FOV == FOV_TBC)
-				{
-					if( abs(diff_ra) > 100 || abs(diff_dec) > 50)
-					{//If difference too big repeat
-						sprintf(temp_string,"%s => FOV is TBC",temp_string);
-						p_tat_info->obs_info.FOV = FOV_TBC; //
-					}
-					else
-					{
-						sprintf(temp_string,"%s => FOV is CORRECT",temp_string);
-						p_tat_info->obs_info.FOV = FOV_CORRECT;
-					}
-				}
-				else if(p_tat_info->obs_info.FOV == FOV_CORRECT)
-				{
-					if( abs(diff_ra) > 100 || abs(diff_dec) > 50)
-					{//If difference too big don't move (most likely astronetry is wrong
-						sprintf(temp_string,"%s Difference too big. Don't move and set FOV=TBC",temp_string);
-						p_tat_info->obs_info.FOV = FOV_TBC; 
-						diff_ra =diff_dec =0;
-					}
-				}
-*/
+				
+// 				if(p_tat_info->obs_info.FOV == FOV_TBC)
+// 				{
+// 					if( abs(diff_ra) > 100 || abs(diff_dec) > 50)
+// 					{//If difference too big repeat
+// 						sprintf(temp_string,"%s => FOV is TBC",temp_string);
+// 						p_tat_info->obs_info.FOV = FOV_TBC; //
+// 					}
+// 					else
+// 					{
+// 						sprintf(temp_string,"%s => FOV is CORRECT",temp_string);
+// 						p_tat_info->obs_info.FOV = FOV_CORRECT;
+// 					}
+// 				}
+// 				else if(p_tat_info->obs_info.FOV == FOV_CORRECT)
+// 				{
+// 					if( abs(diff_ra) > 100 || abs(diff_dec) > 50)
+// 					{//If difference too big don't move (most likely astronetry is wrong
+// 						sprintf(temp_string,"%s Difference too big. Don't move and set FOV=TBC",temp_string);
+// 						p_tat_info->obs_info.FOV = FOV_TBC; 
+// 						diff_ra =diff_dec =0;
+// 					}
+// 				}
 				steplog(temp_string,STAR_TRACK_LOG_TYPE);
 				
 				
 				// move the telescope if more than 5 pixels difference, reset other whie
-			
+
 				if( abs(diff_ra) > 35 || abs(diff_dec) > 18) 
 				{
 					move_pulse(diff_ra,diff_dec);
@@ -837,14 +837,14 @@ int mv(DATE d, STARLIST star_pos, STARLIST Current_pos, float *ra_deg_mv, float 
 	sprintf(temp_string,"HourAngle= %12.6f, Dec=%12.6f", hourAngle_obj, dec_deg_obj);
 	step(temp_string);
 	
-	if(hourAngle_obj < -MIN_ALTITUDE) 
+	if(hourAngle_obj < MIN_ALTITUDE) 
 	{
 		sprintf(temp_string,"ERROR: HA = %f; Star has not risen yet! (<%.2fhr)", hourAngle_obj,MIN_ALTITUDE);
 		step(temp_string);
 	}
-	else if(hourAngle_obj >  MIN_ALTITUDE) // elevation 22 deg 
+	else if(hourAngle_obj >  5.0) // elevation 22 deg 
 	{
-		sprintf(temp_string,"ERROR: HA = %f; Star has already set! (>%.2fhr)", hourAngle_obj, MIN_ALTITUDE);
+		sprintf(temp_string,"ERROR: HA = %f; Star has already set! (>5.3hr)", hourAngle_obj);
 		step(temp_string);
 	}
 	else

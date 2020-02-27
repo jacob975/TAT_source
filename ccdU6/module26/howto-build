@@ -1,0 +1,7 @@
+
+
+The build process for 2.6+ has changed. The correct invocation 
+to rebuild kernel modules is now
+
+make -C /usr/src/linux SUBDIRS=$PWD modules
+

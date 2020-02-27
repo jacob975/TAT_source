@@ -530,8 +530,7 @@ void RapidResetTelescope()
 					sprintf( daemonCmd, "DEC POS FREQUENCY 1 1 65534 0 0 0 0\n");
 					send_cmd2dsp( daemonCmd );
 				}
-				
-				if(p_tat_info->dsp_info.dec.origin)
+				else if(p_tat_info->dsp_info.dec.origin)
 				{
 					printf("\n");
 					sprintf( daemonCmd, "DEC POS FREQUENCY 1 20 208 0 0 0 0\n");

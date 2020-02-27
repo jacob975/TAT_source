@@ -1,6 +1,6 @@
 # Define the site 
 # Do not change this line manually
-SITE = HS
+SITE = TF
 
 # Define the CCD daemon
 # for Apogee AP6 => ccddaemon

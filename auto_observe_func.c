@@ -48,6 +48,7 @@ int DoGetObserveTime(float *setpoint, time_t *p_begin_time, time_t *p_end_time)
 		step(temp_string);
 		return 0;
 	}
+
 	while(!feof(fp) )
 	{
 		fgets(buf, BUFFER_SIZE, fp);
@@ -239,7 +240,7 @@ int wait4star_rise()
 		}
 		sprintf(temp_string,"HourAngle= %12.6f, Dec=%12.6f\n", hourAngle_obj, dec_deg_obj);
 		step(temp_string);
-		if(hourAngle_obj < -MIN_ALTITUDE)//WAIT 60 sec
+		if(hourAngle_obj < MIN_ALTITUDE)//WAIT 60 sec
 		{
 			sprintf(temp_string,"WARNING: HA = %f. Star has not risen yet! (<-5.3hr)\nWait 1 minute\n", hourAngle_obj);
             		step(temp_string);

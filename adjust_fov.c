@@ -37,7 +37,8 @@ void move_pulse(int ra_pulse, int dec_pulse)
 	
 	if(dec_pulse < 18) dec_pulse =0;
 	if(ra_pulse < 35) ra_pulse =0;
-		
+	
+	
 	if(dec_pulse)
 	{
 		dec_seconds=  (int) (0.5+ (dec_pulse/1000));
@@ -49,7 +50,7 @@ void move_pulse(int ra_pulse, int dec_pulse)
 
 		if(dec_reg > 65534)dec_reg=65534;
 		else if(abs(dec_reg) < 208)dec_reg=208;
-
+		
 		sprintf( dec_cmd, "DEC %s FREQUENCY 1 %d %d 0 0 0 0\n",dec_isneg?"NEG":"POS", dec_seconds ,dec_reg);
 
 		if(!ra_pulse)//if no command for RA send the cmd right now
@@ -68,6 +69,11 @@ void move_pulse(int ra_pulse, int dec_pulse)
 		else
 			ra_speed = (ra_pulse/ra_seconds) + STAR_SPEED;
 		
+// 		if(ra_speed <0)
+// 		{
+			//Stop telescope ra_seconds seconds
+// 			sprintf(ra_cmd, "RA POS FREQUENCY 1 1 65534 0 0 0 0\n");
+// 		}
 		if(ra_speed >0)
 		{
 			ra_reg =(int)(0.5 + 1./(20*120.0e-9*ra_speed));

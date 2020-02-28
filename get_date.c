@@ -32,6 +32,66 @@ DATE getSystemTime()
 	return d;
 }//struct Date getSystemTime() 
 
+int getLastNoonTime(DATE *d) 
+{
+	char 	buf[256];
+	int 	yr, mon, day, hr, min, sec;
+	struct tm *tm_ptr;
+	time_t tm_now;
+	float noonhr;
+	int noon_passed = 0;
+	
+	time(&tm_now);
+	tm_ptr=localtime(&tm_now);
+
+	// Read system time
+	strftime(buf,256,"%m %d %Y %H %M %S",tm_ptr);
+	sscanf(buf,"%d %d %d %d %d %d", &mon, &day, &yr, &hr, &min, &sec);
+	noonhr = 12 - LOCAL_LONG/15.0;
+	// Validate the hour of noon.
+	if (noonhr > 24 || noonhr < 0){
+		printf(
+			"Error: Wrong Noon time since the local lontitude is wrong."
+		);
+		return 1;		
+	}
+	// Check whether the hour pass the noon
+	// Then update the last noon time to Date d
+	noon_passed = hr > noonhr;
+	if (noon_passed){
+		d->mon=mon; 
+		d->day=day; 
+		d->yr=yr; 
+		d->hr=noonhr; 
+		d->min=0; 
+		d->sec=0; 
+		d->year=d->yr-2000;
+	}
+	else{
+		d->mon=mon; 
+		d->day=day -1; 
+		d->yr=yr; 
+		d->hr=noonhr;
+		d->min=0; 
+		d->sec=0; 
+		d->year=d->yr-2000;
+	}
+		
+	d->timestamp = get_timestamp((*d));
+	sprintf(
+		d->string,
+		"%04d/%02d/%02d %02d:%02d:%02d",
+		d->yr,
+		d->mon,
+		d->day,
+		d->hr,
+		d->min,
+		d->sec
+	);	
+	return 0;
+
+}//struct Date getSystemTime() 
+
 DATE convert2UT(DATE d)
 {
 	DATE	ut;

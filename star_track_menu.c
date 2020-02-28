@@ -367,6 +367,8 @@ to have time process following procedure */
 	//current time in seconds, will be used to synchronize the deay of DELAY_COMPUTE seconds in timing
 	time(&curtime);
 
+
+	//check_observable_now
 	IsObservable = mv(lt, StarPos, &Ra.deg0_mv,&Dec.deg0_mv);
 //	If IsObservable=0, star not observanle; if 1, observable.
 
@@ -663,6 +665,8 @@ char mv(DATE d, STARLIST star_pos, float *ra_deg_mv, float *dec_deg_mv)
  to be (-12hr, 12hr).
 */
 
+
+//check_observable_now
 // compute the hour angle of the object:
 	hourAngle_obj	= LST - star_pos.ra;
 	dec_deg_obj	= star_pos.dec;

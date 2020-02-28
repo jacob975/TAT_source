@@ -14,12 +14,14 @@ st_tat_info *p_tat_info;
 #define CCD_OFF 0
 #define CCD_ON 1
 #define MOVE_TO_NEXT_OBS 2
+#define BUFFER_SIZE 512
 
 int main(int argc,char* argv[])
 {
-	FILE *cmdFile;
+	FILE *cmdFile, *fin;
+	fpos_t *fposition;
 	int i,input_option;
-	
+	char buf[BUFFER_SIZE], temp_string[200];
 	if(argc != 2)
 	{
 		printf("##################DO NOT FORGET #########################\n");
@@ -42,23 +44,52 @@ int main(int argc,char* argv[])
 	/*get shared memory pointer*/
 	int shmid;
 	create_tat_info_shm( &shmid, &p_tat_info);
-	
-	
-	
+		
 	cmdFile=fopen(AUTO_CMD_FILENAME,"w");
 	
-	if(input_option == MOVE_TO_NEXT_OBS)
+	if(input_option == MOVE_TO_NEXT_OBS){
 		fprintf(cmdFile,"%s",DO_NEXT_OBSERVATION);
+		step("### Moving to the next observation");
+		// Read input file
+		if((fin=fopen(TIME_TABLE_FILENAME,"r+"))==NULL){       
+                	sprintf(
+				temp_string, 
+				"ERROR: Could not find input file (%s).",
+				TIME_TABLE_FILENAME
+			);
+                	steplog(temp_string,STAR_TRACK_LOG_TYPE);
+                	return 1;
+        	}
+		// Skip header
+		while(!feof(fin)){       
+                	fgets(buf, BUFFER_SIZE, fin);
+                	if( !strncmp(buf,"DATA",4)) break;
+        	}
+		// After DATA read 3 more lines
+		fgets(buf, BUFFER_SIZE, fin);
+		fgets(buf, BUFFER_SIZE, fin);
+		fgets(buf, BUFFER_SIZE, fin);
+		fposition = (fpos_t *) malloc (sizeof(fpos_t));
+		// Replace the first 'Y' with 'N' in our schedule
+		while(!feof(fin)){
+			fgetpos(fin, fposition);
+                        fgets(buf, BUFFER_SIZE, fin);
+			if (buf[0] == 'Y' || buf[0] == 'y'){
+				printf("Gotta\n");
+				fsetpos(fin, fposition);
+                        	fseek(fin, 0, SEEK_CUR);
+				fputc('N', fin);
+				break;
+			}
+		}
+		free( fposition);
+		fclose(fin);
+		return 0;
+	}
 	else
 		fprintf(cmdFile,"%s",BREAK_ALL_OBSERVATION);
 	
 	fclose(cmdFile);
-	
-	if(input_option == MOVE_TO_NEXT_OBS) 
-	{
-		step("### Moving to the next observations");
-		return 0; //Just send a message
-	}
 	
 	step("WARNING: Emergency stop observation now !!");
 	if(input_option == CCD_OFF)
@@ -71,7 +102,7 @@ int main(int argc,char* argv[])
 	p_tat_info->obs_info.auto_observing = 0;
 	
 	
-	//Turn web cams ON
+	// Turn web cams ON
 	pwr_rx_poweron();
     /* Often CCD is exposing when sending this command.
        So, The command may be missed. */
@@ -80,7 +111,7 @@ int main(int argc,char* argv[])
 		steplog("CCD cooler warm up",AUTO_OBSERVE_LOG_TYPE);
 		ccd_cooler_shutdown();
 	}
-	//Move 6 degree in case the telescope is in origin
+	// Move 6 degree in case the telescope is in origin
     steplog("Forward Telescope ~3 Degree", AUTO_OBSERVE_LOG_TYPE);
     ForwardTelescope3Degree();
     /* Telescope will stop after ForwardTelescope3Degree() */

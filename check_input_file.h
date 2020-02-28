@@ -9,3 +9,5 @@ int check_input_file(void);
 int check_single_line(int,DATE,DATE,char *,char *,int,int,int,char *,char);
 int insert_obs(char *,char *,char *,char *,int , char *, char , char *);
 void getSunriseSunset(DATE , double *, double *, double *);
+int check_observable_now(char *);
+int check_star_rise(DATE, float);

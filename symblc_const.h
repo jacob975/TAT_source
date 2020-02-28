@@ -84,14 +84,14 @@
 	
 #define DAEMON_PATH			"/home/tat/daemon/"
 #define APP_PATH			"/home/observer/"
-#define VAR_DEF_FILENAME	"/home/observer/tat_parameter.dat"
-#define TIME_TABLE_FILENAME	"/home/observer/star/data/star_input.dat"
-#define REF_PAR_FILENAME	"/home/observer/ref_parameter.dat"
-#define CALIBRATE_PATH 		"/home/observer/star/calibrate"
+#define VAR_DEF_FILENAME		"/home/observer/tat_parameter.dat"
+#define TIME_TABLE_FILENAME		"/home/observer/star/data/star_input.dat"
+#define REF_PAR_FILENAME		"/home/observer/ref_parameter.dat"
+#define CALIBRATE_PATH 			"/home/observer/star/calibrate"
 #define IMAGE_PATH 			"/home/observer/star/image"
 
 /* LOG */
-#define AUTO_OBSERVE_LOG_PATH	"/home/observer/log/auto_observation/"
+#define AUTO_OBSERVE_LOG_PATH		"/home/observer/log/auto_observation/"
 #define STAR_TRACK_LOG_PATH		"/home/observer/log/star_track/"
 #define AUTO_FLAT_LOG_PATH		"/home/observer/log/auto_flat/"
 #define AUTO_DARK_LOG_PATH		"/home/observer/log/auto_dark/"
@@ -99,7 +99,7 @@
 #define MANU_LOG_FILENAME		"/home/observer/log/manu_control.log"
 #define AUTO_CMD_FILENAME		"/home/observer/auto_command.cmd"
 #define DAEMON_LOG_FILENAME		"/home/observer/log/daemon-curr.log"
-#define LSTDAEMON_LOG_FILENAME	"/home/observer/log/lstdaemon-curr.log"
+#define LSTDAEMON_LOG_FILENAME		"/home/observer/log/lstdaemon-curr.log"
 #define REOPEN_FILE_SECOND		10
 #define CMD_SIZE				256
 
@@ -146,7 +146,7 @@
 #define PWR_CMD_FILENAME	"/home/observer/pwr_command.cmd"
 #define PWR_RPY_FILENAME	"/home/observer/pwr_reply.rpy"
 #define PWR_CMD_SIZE		CMD_SIZE
-#define PWR_LOG_FILENAME    "/home/observer/log/pwr_daemon.log"
+#define PWR_LOG_FILENAME    	"/home/observer/log/pwr_daemon.log"
 
 /*    ctl.func symbolic constant*/
 #define CTL_CMD_FILENAME	"/home/observer/ctl_command.cmd"
@@ -176,14 +176,15 @@
 
 #define FOV_CORRECT		0
 #define FOV_TBC			1 //TO BE CONFIRMED
-#define FOV_INCORRECT	2
+#define FOV_INCORRECT		2
 #define FOV_ERROR		3
 
 #define CCD_IDLE		0
 #define CCD_IMAGE		1
 #define CCD_FLAT		2
 #define CCD_DARK		3
-#define CCD_DOING_FLAT	4
+#define CCD_DOING_FLAT		4
+
 
 ////Web images
 #define WEB_FOV_JPG "/var/www/htdocs/current_FOV.jpg"

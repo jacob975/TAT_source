@@ -361,11 +361,18 @@ int insert_obs(
 	if(Nerrors) return 0; //errors get out
 
 	//Generate te
-	sprintf(input_line,"Y %s %s %s %s %d %s %c %s\n",
-			start_string,end_string,ra_string,dec_string,
-			ccd_temp,filter_string,flat_flag, target_name);
-	
-	
+	sprintf(
+		input_line,
+		"Y %s %s %s %s %d %s %c %s\n",
+		start_string,
+		end_string,
+		ra_string,
+		dec_string,
+		ccd_temp,
+		filter_string,
+		flat_flag, 
+		target_name
+	);	
 	sprintf(temp_filename,"%s.temp",TIME_TABLE_FILENAME);
 	
 	if( ( fin=fopen(TIME_TABLE_FILENAME, "r") ) == NULL){
@@ -423,16 +430,19 @@ int insert_obs(
 
 int check_star_rise(DATE d, float ra)
 {
-	// Initialize
+	//----------------------------------------
+	// Declaration 
 	int min;
 	DATE ut;
 	float LST,hourAngle,diff;
-	
+	//---------------------------------------
+	// Initialization
 	ut= convert2UT(d);
 	LST= (float)getLocalSidereal(ut);	
 	//printf("Local Sidereal Time = %10.6f (hr)\n", LST);
 	//printf("Right Ascention = %10.6f (hr)\n", ra);
-	
+	//----------------------------------------
+	// Check whether this target is on the sky or not.
 	hourAngle = LST - ra;
 	// WEST: positive
 	// EAST: negative
@@ -460,3 +470,78 @@ int check_star_rise(DATE d, float ra)
 	}
 	return min;
 }
+////////////////////////////////////////////////////////////////////
+// Check whether this input line is observable right now only based on:
+// 1. open flag
+// 2. start time
+// 3. end time.
+////////////////////////////////////////////////////////////////////
+int check_observable_now(char *input_line)
+{
+	//--------------------------------------------
+	// Declaration
+	// Variables used to read the observation input line.
+	char temp_string[300];
+	char open_flag[2], start_string[20], end_string[20];
+	DATE now, start, end;
+	int i;
+	// Object is NOT observable (default)
+	int objectStatus=0;
+	// The start time has not passed yet (default) 
+	int after_start_time = 0;
+	// The telescope does not have enough time to do observation before end (default) 
+	int time_enough=0;
+	// This source is already observed (default) 
+	int not_observed_yet=0;
+	//------------------------------------------------
+	// Load input line data
+	i = sscanf(
+		input_line, 
+		"%s %s %s %*s %*s %*d %*s %*s %*s",
+		open_flag, 
+		start_string, 
+		end_string
+	);
+	//--------------------------------------------
+	// Time initialization
+	now = getSystemTime();
+	start = string2date(start_string);
+	end = string2date(end_string);	
+	//------------------------------------------------
+	// Check whether the start_time has already passed.
+	// We only start observation after the start_time
+	if (start.timestamp > now.timestamp)
+	{
+		sprintf(temp_string, "ERROR: It is not observing time yet.");
+		//step(temp_string);
+		after_start_time = 0;	
+	}
+	else after_start_time = 1;
+	//------------------------------------------------
+	// Check the source is observed or not.
+	if (!(open_flag[0] == 'y' || open_flag[0] == 'Y'))
+	{
+		sprintf(temp_string, "ERROR: This target is already observed.");
+		//step(temp_string);
+		not_observed_yet = 0;
+	}
+	else not_observed_yet = 1;
+	//------------------------------------------------
+	// Check whether we have enough time to observe that target.
+	// 5 min are required.
+	if (end.timestamp - now.timestamp < FIVEMINUTES)
+	{
+		sprintf(temp_string, "ERROR: The rest of observing time is less than 5 minutes, or the observing time pass already."); 
+		//step(temp_string);
+		time_enough = 0;
+	}
+	else time_enough = 1;
+	//--------------------------------------------
+	// Check whether this source is observable now.	
+	if (after_start_time && not_observed_yet && time_enough) 
+		objectStatus = 1;
+	else 
+		objectStatus = 0;	
+	return objectStatus;
+}
+

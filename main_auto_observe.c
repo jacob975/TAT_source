@@ -33,6 +33,8 @@ st_tat_info *p_tat_info;
 
 int main(int argc ,char *argv[])
 {
+	//--------------------------------------------------------------------
+	// Declaration and Initialization
 	time_t time_now, *p_begin_time, *p_end_time;
 	char time_begin[20], time_end[20];
 	char temp_string[BUFSIZ];
@@ -40,44 +42,64 @@ int main(int argc ,char *argv[])
 	char backup_program[BUFSIZ];
 	int i, countdown,try, wait_result =0, wait_temp = 0, star_rise,wait_flat;
 	int enclosure_open_time,use_report;
-	int N_obs,obs_count,N_input_error,update_coord_result,guard_option;
+	int N_obs,obs_count,N_input_error,observation_updated,guard_option;
 	float set_point,previous_RA,previous_DEC;
 	int start_observation;
 	char flat_filter_options[FILTER_TOTAL_NUMBER],dark_exp_option[200];
-
-	DATE lt,now;
+	int observable;
+	// For weather report
+	DATE	lt,now;
 	cloud_info cloud;
-
-	//for weather report
 	float avg,min,max;
-	const char *weather_var[]={"temper_out","humid_out","wind_avg",
-					"clarity","rain"};//5 variable
-
-	
-	/*get shared memory pointer*/
+	// Five variable about weather
+	const char *weather_var[]={
+		"temper_out",
+		"humid_out",
+		"wind_avg",
+		"clarity",
+		"rain"
+	};
+	// Get shared memory (SHM) pointer
 	int shmid;
-	create_tat_info_shm( &shmid, &p_tat_info);
-	
+	create_tat_info_shm( &shmid, &p_tat_info);	
 	p_begin_time = &(p_tat_info->obs_info.begin_time);
 	p_end_time = &(p_tat_info->obs_info.end_time);
-
 	long wait_interval =  DoGetValue("GET_OBSERVE_TIME_INTERVAL");
-
-	while(1) //Do not stop
+	//--------------------------------------------------------------------
+	// Main loop used to run observation
+	// It will never stop
+	while(1) 
 	{
-/*
-		00 - Read and check input file and weather conditions
-*/
+		//#########################################################
+		// 00 - Read and Check input file and weather conditions
+		//#########################################################
 		step("Checking observing time");
 		do
 		{
-			start_observation= DoGetObserveTime( &set_point, p_begin_time, p_end_time);
+			//-----------------------------------------------------
+			// Find a obesrvable target from schedule
+			// Then update:
+			// 1. CCD set point
+			// 2. begin time of observation
+			// 3. end time of observation
+			// Check observable
+			start_observation= DoGetObserveTime( 
+				&set_point, 
+				p_begin_time, 
+				p_end_time
+			);
+			//-----------------------------------------------------
 			//Check input errors
+			// Check observable
 			N_input_error = check_input_file();
 			if(N_input_error)
 			{
-				sprintf(temp_string,"ERROR : There are %d input errors\nCheck %s !!!",
-					   N_input_error,TIME_TABLE_FILENAME);
+				sprintf(
+					temp_string,
+					"ERROR : There are %d input errors\nCheck %s !!!",
+					N_input_error,
+					TIME_TABLE_FILENAME
+				);
 				step(temp_string);
 				start_observation=0;
 			}
@@ -88,9 +110,9 @@ int main(int argc ,char *argv[])
 				timing( time(NULL)+ wait_interval);
 			}
 		}while( !start_observation);
-/*##########################################################
-  		10 - Preparing for observations 
-############################################################*/
+		//##########################################################
+  		// 10 - Preparing for observations 
+		//############################################################
 		step ("Initialize variables");
 		p_tat_info->obs_info.auto_observing = 1;
 		p_tat_info->obs_info.ccd_status = CCD_IDLE;
@@ -98,18 +120,23 @@ int main(int argc ,char *argv[])
 		
 		for(i=0;i<FILTER_TOTAL_NUMBER;i++)
 			p_tat_info->obs_info.exp_time_changed[i]=0; //Reset the change exp time flag
-
 		
 		enclosure_open_time=DoGetValue("ENCLOSURE_OPEN_TIME");
 		DoGetValueString("OBSERVE_PROGRAM", observe_program);
 		DoGetValueString("DARK_PROGRAM", dark_program);
 		DoGetValueString("BACKUP_PROGRAM", backup_program);
 		
-		//CREATE REPORT AND LOG FILES
-		log_this("Start automatic observation",AUTO_OBSERVE_LOG_TYPE,1);//create file if not present
-		log_this("Start observation",AUTO_REPORT_LOG_TYPE,1);//create file if not present
-		
-		sprintf(temp_string,"Observing begin time: %s\nObserving end time: %s",ctime(p_begin_time),ctime(p_end_time));
+		// CREATE REPORT AND LOG FILES
+		// Create file if not present
+		log_this("Start automatic observation",AUTO_OBSERVE_LOG_TYPE,1);
+		// Create file if not present
+		log_this("Start observation",AUTO_REPORT_LOG_TYPE,1);
+		sprintf(
+			temp_string,
+			"Observing begin time: %s\nObserving end time: %s",
+			ctime(p_begin_time),
+			ctime(p_end_time)
+		);
 		steplog(temp_string, AUTO_OBSERVE_LOG_TYPE);
 		
 		/* remove previous emergency stop command */
@@ -142,11 +169,11 @@ int main(int argc ,char *argv[])
 		ccd_takeimage(temp_string, 2, 1, 1);
 
 		//Reset the telescope for observation
-		SafeResetTelescope();
+		// Debug
 		/*
-			2. Unlock enclosure
-			3. Open enclosure and ? Reset RF
-		*/
+		//SafeResetTelescope();
+		//	2. Unlock enclosure
+		//	3. Open enclosure and ? Reset RF
 		try =0;
 		do
 		{
@@ -154,13 +181,23 @@ int main(int argc ,char *argv[])
 			try++;
 			if(try >=3)
 			{
-				steplog("ERROR: Could not confirm that the enclosure is open!!", AUTO_OBSERVE_LOG_TYPE);
-				finish_observation(dark_program,dark_exp_option,EMERGENCY_STATUS);
+				steplog(
+					"ERROR: Could not confirm that the enclosure is open!!", 
+					AUTO_OBSERVE_LOG_TYPE
+				);
+				finish_observation(
+					dark_program,
+					dark_exp_option,
+					EMERGENCY_STATUS
+				);
 				return 1;
 			}
 		}while(p_tat_info->dsp_info.enc.closed_ls);
-		
-		////Check for MultiObservations
+		*/
+		//--------------------------------------------------------------------------
+		// Check for Multi-Observations
+		// Then set the Flat and Dark string
+		// Check observable
 		N_obs = check_multiple_observation(flat_filter_options,dark_exp_option);
 		sprintf(temp_string,"Obs = %d %s %s\n",N_obs,flat_filter_options,dark_exp_option);
 		step(temp_string);
@@ -170,26 +207,34 @@ int main(int argc ,char *argv[])
 			finish_observation(dark_program,dark_exp_option,EMERGENCY_STATUS);
 			return 1;
 		}
-		sprintf(temp_string,
-				"Number of scheduled observations = %d\tUsed filters: %s\tUsed exp: %s",
-						N_obs,flat_filter_options,dark_exp_option);
+		sprintf(
+			temp_string,
+			"Number of scheduled observations = %d\tUsed filters: %s\tUsed exp: %s",
+			N_obs,
+			flat_filter_options,
+			dark_exp_option
+		);
 		steplog(temp_string, AUTO_OBSERVE_LOG_TYPE);
-/*##########################################################
-  		20 - Flat before observations
-############################################################*/
+		//##########################################################
+  		// 20 - Flat before observations
+		//############################################################
 		////////////////Flat before observation showtime/////////////
-		if(!strcmp(p_tat_info->obs_info.flat_start , "b") ||
-				!strcmp(p_tat_info->obs_info.flat_start , "t"))
-		{
-			//Check current light and current light
+		if(
+			!strcmp(p_tat_info->obs_info.flat_start, "b") ||
+			!strcmp(p_tat_info->obs_info.flat_start, "t")
+		){
+			// Check current light and current light
 			cloud.timekey=0;
 			cloud.light = 50;
 			wait_temp = get_cloud_condition(&cloud);
 			now=getSystemTime();
 			sprintf(temp_string,"Light = %.0f",cloud.light);
 			step(temp_string);
-			if(wait_temp>=0 && cloud.light < 10 && abs(now.timestamp -cloud.timekey)<180)
-			{
+			if(
+				wait_temp>=0 &&
+				cloud.light < 10 && 
+				abs(now.timestamp -cloud.timekey) < 180
+			){
 				steplog("WARNING: Light too low for flat field", AUTO_OBSERVE_LOG_TYPE);
 			} 
 			else 
@@ -200,82 +245,120 @@ int main(int argc ,char *argv[])
 				{
 					return 1;
 				}
-				///////////Reset telescope and CCDdaemon////
-	// 			send_cmd2ctl("ccddaemon restart");
+				/////////// Reset telescope and CCDdaemon ////
+				//send_cmd2ctl("ccddaemon restart");
 				steplog("Reset Telescope", AUTO_OBSERVE_LOG_TYPE);
 				p_tat_info->obs_info.status = Returning;
-				SafeResetTelescope();
-	// 			ccd_cooler_on(set_point);
+				// Debug
+				//SafeResetTelescope();
+				//ccd_cooler_on(set_point);
 			} // if (flat before observation)
 		}
-/*##########################################################
-  		30 - Observations
-############################################################*/
+		//##########################################################
+  		// 30 - Observations
+		//############################################################
 		// MULTI OBSERVATION SUPPORTED
 		previous_DEC = previous_RA = -1;
 		obs_count=0;
 		do
 		{
-			update_coord_result = set_current_observation(flat_filter_options,dark_exp_option);
-			if(!update_coord_result) 
-			{
+			//-----------------------------------------------------
+			// Check observable
+			observation_updated = set_current_observation(
+				flat_filter_options,
+				dark_exp_option
+			);
+			if(observation_updated == 0){
 				step("### No more observations tonight");
 				continue;
 			}
-			else if(update_coord_result<0)
+			else if(observation_updated<0)
 				previous_RA = previous_DEC=-1; //for dark, return to home position 
-				
+	
 			obs_count++;
-			
 			sprintf(temp_string,"Observation %d",obs_count);
 			steplog(temp_string, AUTO_OBSERVE_LOG_TYPE);
 			
 			// For the first observation
 			//doublecheck the telescope is in home position 
 			
-			if(previous_RA <0 &&(!p_tat_info->dsp_info.ra.origin || !p_tat_info->dsp_info.dec.origin ))
-			{
+			if(
+				previous_RA <0 &&
+				(!p_tat_info->dsp_info.ra.origin || !p_tat_info->dsp_info.dec.origin )
+			){
 				p_tat_info->obs_info.status = Returning;
-				SafeResetTelescope();
+				// Debug
+				//SafeResetTelescope();
 			}
-			// Updates the ending time and coordinates
-			//in the shared memory
+			//-------------------------------------------------------------------
+			// Take Exposure or Dark:
+			//  1: Exposure
+			// -1: Dark using shm
+			// -2: Dark using string
 			
-			if(update_coord_result>0) //star observation wait for star
+			// Take exposures
+			if(observation_updated>0)
 			{
 				sprintf(temp_string,"### Observing %s",p_tat_info->obs_info.target_name);
 				steplog(temp_string, AUTO_OBSERVE_LOG_TYPE);
-				////wait if the star is not on the sky
 				steplog("Wait for Star Rise", AUTO_OBSERVE_LOG_TYPE);
 				p_tat_info->obs_info.status = STOP;
+				//--------------------------------------------------
+				// Check whether the target is on the sky.
+				// Check observable
 				star_rise = wait4star_rise();
-				
 				if(star_rise==EMERGENCY_STATUS)
 				{
-					steplog("WARNING: Observation canceled by observer", AUTO_OBSERVE_LOG_TYPE);
+					steplog(
+						"WARNING: Observation canceled by observer", 
+						AUTO_OBSERVE_LOG_TYPE
+					);
 					return 1;
 				}
 				else if(star_rise==NEXT_OBSERVATION)
 				{
-					steplog("WARNING: Observer requested to move to next observation", AUTO_OBSERVE_LOG_TYPE);
+					steplog(
+						"WARNING: Observer requested to move to next observation", 
+						AUTO_OBSERVE_LOG_TYPE
+					);
 					continue;
 				}
 				else if(star_rise!=NORMAL_STATUS) //Bad weather
 				{
-					steplog("WARNING: No Observation today", AUTO_OBSERVE_LOG_TYPE);
+					steplog(
+						"WARNING: No Observation today",
+						AUTO_OBSERVE_LOG_TYPE
+					);
 					wait_result = star_rise;
-					finish_observation(dark_program,dark_exp_option,wait_result);
+					finish_observation(
+						dark_program,
+						dark_exp_option,
+						wait_result
+					);
 					return 1;
 				}
 				
 				p_tat_info->obs_info.FOV = FOV_TBC;
+				//-----------------------------------------------------------------
+				// Call observing program
 				steplog("Call observing program", AUTO_OBSERVE_LOG_TYPE);
 				// Check if it is the first night's observation
 				if(previous_RA<0)
-					sprintf(system_cmd,"%s%s &",APP_PATH,observe_program);
+					sprintf(
+						system_cmd,
+						"%s%s &",
+						APP_PATH,
+						observe_program
+					);
 				else
-					sprintf(system_cmd,"%s%s %lf %lf &",APP_PATH,
-							observe_program,previous_RA,previous_DEC);
+					sprintf(
+						system_cmd,
+						"%s%s %lf %lf &",
+						APP_PATH,
+						observe_program,
+						previous_RA,
+						previous_DEC
+					);
 					
 				system(system_cmd);
 				steplog(system_cmd, AUTO_OBSERVE_LOG_TYPE);
@@ -285,16 +368,29 @@ int main(int argc ,char *argv[])
 				previous_RA = p_tat_info->obs_info.RA;
 				previous_DEC = p_tat_info->obs_info.DEC;
 			}
-			else //Dark observation == -1 for using shared memmory, -2 for use string
-			{
+			// Take dark current
+			else if(observable < 0) {
+				//-----------------------------------------------------------------
+				// Call dark program
 				steplog("### Taking Darks", AUTO_OBSERVE_LOG_TYPE);
 				p_tat_info->obs_info.FOV = FOV_CORRECT; //
 				ForwardTelescope3Degree(); //move telescope away from HS
 				steplog("Call dark program", AUTO_OBSERVE_LOG_TYPE);
-				if(update_coord_result == -1)
-					sprintf(system_cmd,"%s%s 0 4000 &",APP_PATH,dark_program);
+				if(observation_updated == -1)
+					sprintf(
+						system_cmd,
+						"%s%s 0 4000 &",
+						APP_PATH,
+						dark_program
+					);
 				else
-					sprintf(system_cmd,"%s%s %s 4000 &",APP_PATH,dark_program,dark_exp_option);
+					sprintf(
+						system_cmd,
+						"%s%s %s 4000 &",
+						APP_PATH,
+						dark_program,
+						dark_exp_option
+					);
 					
 				system(system_cmd);
 				steplog(system_cmd, AUTO_OBSERVE_LOG_TYPE);
@@ -304,11 +400,11 @@ int main(int argc ,char *argv[])
 				previous_RA = previous_DEC=-1;
 				p_tat_info->obs_info.ccd_status = CCD_DARK;//3=taking dark
 			}
-	/////////////		Wait for end time
+			//Wait for end time
 			steplog("Waiting for observing end time", AUTO_OBSERVE_LOG_TYPE);
 			wait_result = guard(guard_option);
-		// ++++++ Break observation program ++++++++
-			step("End of observation.Break observing program");
+			// ++++++ Break observation program ++++++++
+			step("End of observation. Break observing program.");
 			//Kill the program
 			system(system_cmd);
 			//abort any possible taking exposure from CCD
@@ -338,11 +434,11 @@ int main(int argc ,char *argv[])
 				sprintf(temp_string,"Observation %d had Normal Finish",obs_count);
 				steplog(temp_string, AUTO_OBSERVE_LOG_TYPE);
 			}//if(wait_result)
-		}while(update_coord_result);
-//////////////////////Normal uninstall procedure///////////////////////
-/*##########################################################
+		}while(observation_updated);
+		//////////////////////Normal uninstall procedure///////////////////////
+		/*##########################################################
   		40 - Flat after observations
-############################################################*/
+		############################################################*/
 		if (!strcmp(p_tat_info->obs_info.flat_start , "a") || 
 			!strcmp(p_tat_info->obs_info.flat_start , "t"))
 		{
@@ -374,14 +470,14 @@ int main(int argc ,char *argv[])
 				}
 			}
 		}
-/*##########################################################
+		/*##########################################################
   		50 - Ending observations
-############################################################*/
+		############################################################*/
 		finish_observation(dark_program,dark_exp_option,wait_result);
 		
-/*##########################################################
+		/*##########################################################
   		60 - Back up the data to remote server
-############################################################*/
+		############################################################*/
 
 		steplog("Perform remote backup", AUTO_OBSERVE_LOG_TYPE);
 		remote_backup();

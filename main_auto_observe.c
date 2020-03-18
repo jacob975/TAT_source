@@ -83,7 +83,8 @@ int main(int argc ,char *argv[])
 			// 2. begin time of observation
 			// 3. end time of observation
 			// Check observable
-			start_observation= DoGetObserveTime( 
+			start_observation = 0;
+			start_observation = DoGetObserveTime( 
 				&set_point, 
 				p_begin_time, 
 				p_end_time
@@ -91,6 +92,7 @@ int main(int argc ,char *argv[])
 			//-----------------------------------------------------
 			//Check input errors
 			// Check observable
+			N_input_error = 0;
 			N_input_error = check_input_file();
 			if(N_input_error)
 			{
@@ -168,9 +170,8 @@ int main(int argc ,char *argv[])
 		remove(temp_string);
 		ccd_takeimage(temp_string, 2, 1, 1);
 
-		//Reset the telescope for observation
-		// Debug
-		/*
+		//	1. Reset the telescope for observation
+		/*Debug
 		//SafeResetTelescope();
 		//	2. Unlock enclosure
 		//	3. Open enclosure and ? Reset RF
@@ -194,6 +195,7 @@ int main(int argc ,char *argv[])
 			}
 		}while(p_tat_info->dsp_info.enc.closed_ls);
 		*/
+
 		//--------------------------------------------------------------------------
 		// Check for Multi-Observations
 		// Then set the Flat and Dark string
@@ -251,7 +253,7 @@ int main(int argc ,char *argv[])
 				p_tat_info->obs_info.status = Returning;
 				// Debug
 				//SafeResetTelescope();
-				//ccd_cooler_on(set_point);
+				ccd_cooler_on(set_point);
 			} // if (flat before observation)
 		}
 		//##########################################################
@@ -264,6 +266,7 @@ int main(int argc ,char *argv[])
 		{
 			//-----------------------------------------------------
 			// Check observable
+			observation_updated = 0;
 			observation_updated = set_current_observation(
 				flat_filter_options,
 				dark_exp_option
@@ -297,6 +300,8 @@ int main(int argc ,char *argv[])
 			// -2: Dark using string
 			
 			// Take exposures
+			sprintf(temp_string,"Observation_updated: %d",observation_updated);
+			steplog(temp_string, AUTO_OBSERVE_LOG_TYPE);
 			if(observation_updated>0)
 			{
 				sprintf(temp_string,"### Observing %s",p_tat_info->obs_info.target_name);
@@ -368,8 +373,16 @@ int main(int argc ,char *argv[])
 				previous_RA = p_tat_info->obs_info.RA;
 				previous_DEC = p_tat_info->obs_info.DEC;
 			}
+			//------------------------------------------------
+			// TODO
+			// Currently, the auto_dark program is not finished.
+			// It will take 4000 darks in one command, which is not able to complete.
+			// We should control the number of exposure between observations.
+			// 
+			// Also, the dark current schedule will not be updated by auto_dark program,
+			// after all the dark current are taken already.
 			// Take dark current
-			else if(observable < 0) {
+			else if(observation_updated < 0) {
 				//-----------------------------------------------------------------
 				// Call dark program
 				steplog("### Taking Darks", AUTO_OBSERVE_LOG_TYPE);
@@ -439,7 +452,7 @@ int main(int argc ,char *argv[])
 		/*##########################################################
   		40 - Flat after observations
 		############################################################*/
-		if (!strcmp(p_tat_info->obs_info.flat_start , "a") || 
+		if (	!strcmp(p_tat_info->obs_info.flat_start , "a") || 
 			!strcmp(p_tat_info->obs_info.flat_start , "t"))
 		{
 			//Check current light and current light
@@ -459,7 +472,8 @@ int main(int argc ,char *argv[])
 				steplog("Take flat field after observation", AUTO_OBSERVE_LOG_TYPE);
 				steplog("Moving Telescope to Home Position", AUTO_OBSERVE_LOG_TYPE);
 				p_tat_info->obs_info.status = Returning;
-				SafeResetTelescope();
+				// Debug
+				//SafeResetTelescope();
 	// 			ccd_cooler_on(set_point);
 				
 				//////Call The Flat function //////////
@@ -528,7 +542,8 @@ void finish_observation(char *dark_program,char * dark_exp_option,int wait_resul
 	}
     //CLOSE ENCLOSURE and reset telescope
 	steplog("Moving telescope to Home position and closing enclosure", AUTO_OBSERVE_LOG_TYPE);
-	SafeResetTelescope(); //Send telescope to home position first
+	// Debug
+	//SafeResetTelescope(); //Send telescope to home position first
 	ClosePart();
 
     //shutdown the CCD if weather problem

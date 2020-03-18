@@ -430,7 +430,8 @@ void ParkTelescope()
 	step("Finish parking Telescope");
 }
 
-
+// TODO
+// The direction of DEC is wrong on the second times.
 void RapidResetTelescope()
 {
 	int ra_origin= 0;

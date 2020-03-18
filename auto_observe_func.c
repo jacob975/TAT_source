@@ -63,6 +63,8 @@ int DoGetObserveTime(float *setpoint, time_t *p_begin_time, time_t *p_end_time)
 	while(fgets(buf, BUFFER_SIZE, fp))
 	{
 		//--------------------------------------------------------------------
+		// Initialize
+		observable = 0;
 		// Load input line from observation schedule
 		i=sscanf( 
 			buf,
@@ -159,95 +161,6 @@ int DoGetObserveTime(float *setpoint, time_t *p_begin_time, time_t *p_end_time)
 	}
 	fclose( fp);
 	return 0;
-		/* 
-		if(diff_begin > 0 && diff_end > before_end_time)
-		{
-			if( ( strcmp(open_flag,"Y") && strcmp(open_flag,"y") )== 0){
-				//printf("%s,%s,%s,%d\n",open_flag,begin_string,end_string,*setpoint);
-				// Check weather conditions
-				weather_flag =  check_previous_weather_conditions_print(1);//be conservative
-				if(weather_flag != NORMAL_STATUS) return 0;
-
-			    	// Analising flat time
-				strcpy(p_tat_info->obs_info.flat_start , flat_start);
-				if (!strcmp(p_tat_info->obs_info.flat_start,"a"))
-					step("Lets do flat after observation");
-				else if (!strcmp(p_tat_info->obs_info.flat_start,"b"))
-					step("Lets do flat before observation");
-				else if (!strcmp(p_tat_info->obs_info.flat_start,"t"))
-					step("Lets do flat after and before observation");
-				else if (!strcmp(p_tat_info->obs_info.flat_start,"n"))
-					step("No Flat Fielding in this observation");
-				else{
-					sprintf(
-						temp_string,
-						"ERROR: Can not understand this flat \"%s\".",
-						p_tat_info->obs_info.flat_start
-					);
-					step(temp_string);
-					break;
-				}	
-				sscanf(ra_string,"%d:%d:%d",&ra_h,&ra_m,&ra_s);
-				sscanf(dec_string,"%d:%d:%d",&dec_d,&dec_m,&dec_s);
-				if(dec_d <0){
-					dec_m *=-1;
-					dec_s *=-1;
-				}
-				// For the shared memory
-				p_tat_info->obs_info.RA  = (float)ra_h + (float)ra_m/60. + (float)ra_s/3600.;
-				p_tat_info->obs_info.DEC = (float)dec_d + (float)dec_m/60. + (float)dec_s/3600.;
-				
-				// Get the information of the filters
-				p_tat_info->obs_info.N_filters = read_filter_string(
-					filter_string, 
-					p_tat_info->obs_info.filter_seq, 
-					p_tat_info->obs_info.filter_exp_time,
-					p_tat_info->obs_info.filter_obs_time
-				);
-
-				fclose( fp);
-				// Send the info back
-				ptr_time.tm_year= begin_date.yr - 1900;
-				ptr_time.tm_mon= begin_date.mon - 1;
-				ptr_time.tm_mday= begin_date.day;
-				ptr_time.tm_hour= begin_date.hr;
-				ptr_time.tm_min= begin_date.min;
-				ptr_time.tm_sec= begin_date.sec;
-				ptr_time.tm_isdst= 0;
-				*p_begin_time=mktime(&ptr_time);
-				
-				ptr_time.tm_year= end_date.yr - 1900;
-				ptr_time.tm_mon= end_date.mon - 1;
-				ptr_time.tm_mday= end_date.day;
-				ptr_time.tm_hour= end_date.hr;
-				ptr_time.tm_min= end_date.min;
-				ptr_time.tm_sec= end_date.sec;
-				ptr_time.tm_isdst= 0;
-				*p_end_time=mktime(&ptr_time);
-				
-				return 1;
-			}
-		    else{
-		   	sprintf(
-				temp_string,
-				"%s,%s,%s",
-				open_flag,
-				begin_string,
-				end_string
-			);
-			step(temp_string);
-			sprintf(
-				temp_string,
-				"WARNING: It is observing time, but Flag is \"%s\".",
-				open_flag
-			);
-		    	step(temp_string);
-		    }
-		}
-	}
-	fclose( fp);
-	return 0;
-	*/
 }
 
 int wait4star_rise()
@@ -401,8 +314,8 @@ int check_multiple_observation(char *flat_filter_option, char *dark_exp_option)
 		observable_now = check_observable_now(buf);
 		// Check if it is observable tonight 	
 		if(
-			Nobs &&
-			begin_date.timestamp > last_noon.timestamp &&
+			//Nobs &&
+			begin_date.timestamp > now.timestamp &&
 			begin_date.timestamp < next_noon.timestamp
 		) 
 			observable_tonight = 1;
@@ -420,66 +333,6 @@ int check_multiple_observation(char *flat_filter_option, char *dark_exp_option)
 	}
 	fclose(fp);
 	return Nobs;
-	/*
-	// Old one as reference. Don't delete it.	
-	while(fgets(buf, BUFFER_SIZE, fp) && Nobs<5){
-		//--------------------------------------------------
-		// Load input line
-		i=sscanf( 
-			buf,
-			"%s %s %s %*s %*s %*s %s",
-			open_flag, 
-			begin_string,
-			end_string,
-			filter_string
-		);
-		// Quit if some input is missing
-		if(i<4)continue; 
-		// Only check the input line start with 'Y' or 'y'
-		open_flag[1]='\0';
-		if(open_flag[0] != 'Y' && open_flag[0] != 'y') continue;	
-		//--------------------------------------------------
-		// Check if it is observing time
-		begin_date = string2date(begin_string);
-		end_date = string2date(end_string);
-		if(
-			begin_date.timestamp < now.timestamp && 
-			end_date.timestamp > now.timestamp
-		){
-			if(Nobs){
-				step("ERROR: Several observations have the same schedule.");
-				fclose(fp);
-				return 0;
-			}
-			begin[Nobs] = begin_date.timestamp;
-			end[Nobs] = end_date.timestamp;
-			Nobs++;
-			update_flat_dark_strings(filter_string,flat_filter_option,dark_exp_option);
-		}
-			
-		if(Nobs){
-			// Check if the next observation happens whithin ten minutes
-			if(begin_date.timestamp < (end[Nobs-1] +TENMINUTES) &&
-					begin_date.timestamp > begin[Nobs-1])
-			{
-				if(end_date.timestamp < begin_date.timestamp+ONEHOUR)
-				{
-					step("ERROR: End Observation has to be at least one hour higher than Start Observation.");
-					fclose(fp);
-					return 0;
-				}
-				else
-				{
-					begin[Nobs] = begin_date.timestamp;
-					end[Nobs] = end_date.timestamp;
-					Nobs++;
-					update_flat_dark_strings(filter_string,flat_filter_option,dark_exp_option);
-				}
-			}
-		}
-	}
-	*/
-	// Find the Flat and Dark required on observation tonight. 
 }
 
 
@@ -492,7 +345,7 @@ int set_current_observation(char *flat_filter_option, char *dark_exp_option)
 	// Declaration
 	int i,ra_h,ra_m,ra_s;
 	int dec_d,dec_m,dec_s;
-	DATE begin_date,end_date,now;
+	DATE begin_date,end_date,now, last_noon, next_noon;
 	char buf[BUFFER_SIZE], temp_string[200];
 	char begin_string[20],end_string[20],ra_string[15],dec_string[15];
 	char open_flag[2],filter_string[100],target_name[100];
@@ -500,7 +353,7 @@ int set_current_observation(char *flat_filter_option, char *dark_exp_option)
 	struct tm *ptr_time;
 	time_t rawtime;
 	fpos_t *fposition;
-	int observable = 0, observable_later = 0;
+	int observable = 0, observable_later = 0, last_noon_status = 0;
 	//--------------------------------------------------
 	// Load the observation schedule
 	if( ( fp=fopen(TIME_TABLE_FILENAME, "r+") ) == NULL)
@@ -546,6 +399,35 @@ int set_current_observation(char *flat_filter_option, char *dark_exp_option)
 		begin_date = string2date(begin_string);
 		end_date = string2date(end_string);	
 		if(i<7) continue; // Some input is missing
+		// Get last noon time
+		last_noon_status = getLastNoonTime(&last_noon);
+		if (last_noon_status){
+			sprintf(
+				temp_string,
+				"Error: No correct last noon time available."
+			);
+			step(temp_string);
+			return 0; // No observation tonight
+		}
+		// Get next noon time
+		next_noon.mon =last_noon.mon; 
+        	next_noon.day =last_noon.day+1;
+        	next_noon.yr  =last_noon.yr; 
+        	next_noon.hr  =last_noon.hr;
+        	next_noon.min =last_noon.min;
+        	next_noon.sec =last_noon.sec; 
+        	next_noon.year=last_noon.year;
+		next_noon.timestamp = get_timestamp(next_noon);
+		sprintf(
+        	        next_noon.string,
+        	        "%04d/%02d/%02d %02d:%02d:%02d",
+        	        next_noon.yr,
+        	        next_noon.mon,
+        	        next_noon.day,
+        	        next_noon.hr,
+        	        next_noon.min,
+        	        next_noon.sec
+        	);
 		//-----------------------------------------------------------------
 		// Check whether this target is observable or not.
 		// The target should be:
@@ -554,11 +436,10 @@ int set_current_observation(char *flat_filter_option, char *dark_exp_option)
 		// 3. In start time 
 		observable = check_observable_now(buf);
 		observable_later = 0;
-		/*
 		observable_later = 
-			begin_date.timestamp <= (now.timestamp + FOURHOURS) && 
-			begin_date.timestamp >= (now.timestamp + TENMINUTES);
-		*/
+			(open_flag[0] == 'Y' || open_flag[0] == 'y') &&
+			begin_date.timestamp >= now.timestamp &&
+			begin_date.timestamp <= next_noon.timestamp;
 		//-----------------------------------------------------------------
 		// Skip this target if not observable
 		if (!(observable) && !(observable_later)){ 
@@ -566,7 +447,6 @@ int set_current_observation(char *flat_filter_option, char *dark_exp_option)
 			fsetpos(fp, fposition);
 			fseek(fp, 0, SEEK_CUR);
 			fputc('N', fp);
-			//fseek(fp, 0, SEEK_CUR);
 			continue;
 		}
 		//-----------------------------------------------------------------
@@ -620,6 +500,7 @@ int set_current_observation(char *flat_filter_option, char *dark_exp_option)
 		//-------------------------------------------------------------
 		// It is not observing time, but there is an observation later
 		// Take darks until the begining of next observation
+		// The following scripts has bugs
 		else if(observable_later){
 			time (&rawtime);
 			ptr_time = localtime(&rawtime);

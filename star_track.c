@@ -102,7 +102,7 @@ int main(int argc,char* argv[])
 	char date_string[200], command[300];
 	char image_filename[BUFSIZ], camera_command[BUFSIZ*2];
 	char str[200], str1[200],target_name[50];
-	char temp_string[BUFFER_SIZE],buf[BUFFER_SIZE];
+	char temp_string[BUFFER_SIZE],buf[BUFFER_SIZE], schedule_line[BUFFER_SIZE];
 	float set_point, exposure_time;
 	int diff_ra,diff_dec; 
 	int N_filters, filter_seq[FILTER_TOTAL_NUMBER],filter_exp_time[FILTER_TOTAL_NUMBER];
@@ -118,6 +118,7 @@ int main(int argc,char* argv[])
 	time_t curtime, waittime;
 	time_t adjust_start,adjust_stop;
 	int diff_begin,diff_end;
+	int keep_pointing=0;
 	int Adjust_FOV=0;
 	int Min_dec=-30,Max_dec=55;	
 	STARLIST Star[12], StarPos, Current_pos;
@@ -218,7 +219,7 @@ int main(int argc,char* argv[])
 
 	//-------------------------------------------------------------------------------------
 	// Read input file
-	if((fin1=fopen(TIME_TABLE_FILENAME,"r"))==NULL)
+	if((fin1=fopen(TIME_TABLE_FILENAME,"r+"))==NULL)
 	{
 		sprintf(temp_string, "ERROR: Could not find input file (%s).",TIME_TABLE_FILENAME);
 		steplog(temp_string,STAR_TRACK_LOG_TYPE);
@@ -228,22 +229,18 @@ int main(int argc,char* argv[])
 	while(!feof(fin1))
 	{
 		fgets(buf, BUFFER_SIZE, fin1);
-		if( !strncmp(buf,"DATA",4) )
-					break;
+		if( !strncmp(buf,"DATA",4) ) break;
 	}
 	// After DATA read 3 more lines
 	fgets(buf, BUFFER_SIZE, fin1);
 	fgets(buf, BUFFER_SIZE, fin1);
 	fgets(buf, BUFFER_SIZE, fin1);
 	// Read input lines
-
 	if_time_flag=0;
- 	fposition = (fpos_t *) malloc (sizeof(fpos_t));
 	while(!feof(fin1))
 	{
 		//---------------------------------------------------------
 		// Initialize the file cursor
-		fgetpos( fin1, fposition);
 		fgets(buf, BUFFER_SIZE, fin1);
 		i = sscanf(
 			buf,
@@ -259,10 +256,10 @@ int main(int argc,char* argv[])
 		IsObservable = check_observable_now(buf);
 		if (!(IsObservable))
 			continue;
+		strcpy(schedule_line, buf);
 		//---------------------------------------------------------
 		// Show the information of current observation.	
 		buf[strlen(buf)-1] = 0;
-		steplog(buf, STAR_TRACK_LOG_TYPE);
 		open = string2date(open_string);
 		close = string2date(close_string);
 		sprintf(
@@ -365,13 +362,8 @@ int main(int argc,char* argv[])
 		}
 		*/
 		steplog("****************************",STAR_TRACK_LOG_TYPE);
-		// Set D
-		fsetpos(fin1, fposition);
-		fseek(fin1, 0, SEEK_CUR);
-		fputc('D', fin1);
 		break;
 	}
- 	free( fposition);
 	fclose(fin1);
 	//--------------------------------------------------------------------------------
 	// If no input line is observable, return this program.
@@ -481,9 +473,6 @@ int main(int argc,char* argv[])
 	//Compute time required to move from origin to object's current position
 	Ra.time_mv2_f = (float)( Ra.deg0_mv*DTOP_RA - FAST_SPEED_TIME1* Ra.motor_speed1)/ Ra.motor_speed2;
 	Dec.time_mv2_f= (float)(Dec.deg0_mv*DTOP_DEC- FAST_SPEED_TIME1*Dec.motor_speed1)/Dec.motor_speed2;
-	// TODO
-	// The time limitation is not resonable
-	// If the spatial offset is too short, error returned.
 	sprintf(
 		temp_string, 
 		"Time required to move to next object (seconds): RA= %7.2f; DEC= %7.2f",
@@ -493,118 +482,120 @@ int main(int argc,char* argv[])
 	steplog(temp_string, STAR_TRACK_LOG_TYPE);
 	if(Ra.time_mv2_f < 0. || Dec.time_mv2_f < 0. )
 	{
-		steplog("ERROR: 2nd-stage time is negative!",STAR_TRACK_LOG_TYPE);
-		return 1;
+		steplog("WARNING: 2nd-stage time is negative!",STAR_TRACK_LOG_TYPE);
+		steplog("Keep the pointing.",STAR_TRACK_LOG_TYPE);
+		keep_pointing = 1;
 	}
+	if (!keep_pointing)
+	{
+		Ra.time_mv2   = (int)(0.5 + Ra.time_mv2_f);
+		Dec.time_mv2  = (int)(0.5 +Dec.time_mv2_f);
+		Ra.time_mv_f  = (float)FAST_SPEED_TIME1 + Ra.time_mv2_f;
+		Dec.time_mv_f = (float)FAST_SPEED_TIME1 +Dec.time_mv2_f;
+		Ra.time_mv    = FAST_SPEED_TIME1 + Ra.time_mv2;
+		Dec.time_mv   = FAST_SPEED_TIME1 +Dec.time_mv2;
 
-	Ra.time_mv2   = (int)(0.5 + Ra.time_mv2_f);
-	Dec.time_mv2  = (int)(0.5 +Dec.time_mv2_f);
-	Ra.time_mv_f  = (float)FAST_SPEED_TIME1 + Ra.time_mv2_f;
-	Dec.time_mv_f = (float)FAST_SPEED_TIME1 +Dec.time_mv2_f;
-	Ra.time_mv    = FAST_SPEED_TIME1 + Ra.time_mv2;
-	Dec.time_mv   = FAST_SPEED_TIME1 +Dec.time_mv2;
+		// Compute additional time required to move to object due to movement of star
+		// A third speed will be used for this additional time
+		// See the note for the formular to compute Ra.time_mv3_f.
+		Ra.time_mv3_f = (SIDEREALSPEED*Ra.time_mv + Ra.motor_speed2*(Ra.time_mv_f-Ra.time_mv))/(Ra.motor_speed3-SIDEREALSPEED);
+		Ra.time_mv3   = (int)(0.5 + Ra.time_mv3_f);
 
-	// Compute additional time required to move to object due to movement of star
-	// A third speed will be used for this additional time
-	// See the note for the formular to compute Ra.time_mv3_f.
-	Ra.time_mv3_f = (SIDEREALSPEED*Ra.time_mv + Ra.motor_speed2*(Ra.time_mv_f-Ra.time_mv))/(Ra.motor_speed3-SIDEREALSPEED);
-	Ra.time_mv3   = (int)(0.5 + Ra.time_mv3_f);
+		// Compute total time required to move to object due to movement of star
+		Ra.actual_time_mv_f = Ra.time_mv_f + Ra.time_mv3_f;
+		Ra.actual_time_mv   = (int)(0.5 + Ra.actual_time_mv_f);
+		// Star does not move in DEC
+		Dec.actual_time_mv  = Dec.time_mv;
 
-	// Compute total time required to move to object due to movement of star
-	Ra.actual_time_mv_f = Ra.time_mv_f + Ra.time_mv3_f;
-	Ra.actual_time_mv   = (int)(0.5 + Ra.actual_time_mv_f);
-	// Star does not move in DEC
-	Dec.actual_time_mv  = Dec.time_mv;
+		// Print information
+		sprintf(temp_string,
+				" RA: 1st stage= 10 s; 2nd stage=%4d s; 3rd stage=%4d s; total=%5d s", 
+				Ra.time_mv2, Ra.time_mv3, Ra.actual_time_mv);
+		sprintf(temp_string,
+				"%s\nDec: 1st stage= 10 s; 2nd stage=%4d s; total=%5d s",temp_string, 
+				Dec.time_mv2, Dec.actual_time_mv);
+		steplog(temp_string,STAR_TRACK_LOG_TYPE);
 
-	// Print information
-	sprintf(temp_string,
-			" RA: 1st stage= 10 s; 2nd stage=%4d s; 3rd stage=%4d s; total=%5d s", 
-			Ra.time_mv2, Ra.time_mv3, Ra.actual_time_mv);
-	sprintf(temp_string,
-			"%s\nDec: 1st stage= 10 s; 2nd stage=%4d s; total=%5d s",temp_string, 
-			Dec.time_mv2, Dec.actual_time_mv);
-	steplog(temp_string,STAR_TRACK_LOG_TYPE);
+		/**************************************************************************/
+		// compute actual number of pulses
+		RaActualPulse = Ra.deg0_mv*DTOP_RA + SIDEREALSPEED*Ra.actual_time_mv;
+		DecActualPulse = Dec.deg0_mv*DTOP_DEC;
 
-	/**************************************************************************/
-	// compute actual number of pulses
-	RaActualPulse = Ra.deg0_mv*DTOP_RA + SIDEREALSPEED*Ra.actual_time_mv;
-	DecActualPulse = Dec.deg0_mv*DTOP_DEC;
+		sprintf(temp_string,
+				"RA actual pulse:      %12.1f, DEC actual pulse:      %12.1f",
+				RaActualPulse,	DecActualPulse);
+		steplog(temp_string,STAR_TRACK_LOG_TYPE);
 
-	sprintf(temp_string,
-			"RA actual pulse:      %12.1f, DEC actual pulse:      %12.1f",
-			RaActualPulse,	DecActualPulse);
-	steplog(temp_string,STAR_TRACK_LOG_TYPE);
-
-	//  send out DSP command to restrict the number of pulses
-	sprintf(Ra.cmd ,"RA POS LIMIT 0 0 0 0 0 0 0\nRA POS LIMIT 1 0 %d 0 0 0 0\n", (int)RaActualPulse);
-	sprintf(Dec.cmd ,"DEC POS LIMIT 0 0 0 0 0 0 0\nDEC POS LIMIT 1 0 %d 0 0 0 0\n", (int)DecActualPulse);
+		//  send out DSP command to restrict the number of pulses
+		sprintf(Ra.cmd ,"RA POS LIMIT 0 0 0 0 0 0 0\nRA POS LIMIT 1 0 %d 0 0 0 0\n", (int)RaActualPulse);
+		sprintf(Dec.cmd ,"DEC POS LIMIT 0 0 0 0 0 0 0\nDEC POS LIMIT 1 0 %d 0 0 0 0\n", (int)DecActualPulse);
 #ifndef DEBUG
-	fout=fopen(DSP_CMD_FILENAME, "w");
-	// both RA and DEC pulse numbers are restricted.
-	fprintf(fout, "%s\n%s\n",Ra.cmd,Dec.cmd);
-	fclose(fout);
+		fout=fopen(DSP_CMD_FILENAME, "w");
+		// both RA and DEC pulse numbers are restricted.
+		fprintf(fout, "%s\n%s\n",Ra.cmd,Dec.cmd);
+		fclose(fout);
 #endif
-	sprintf(temp_string, "Ra.cmd=%s, Dec.cmd=%s", Ra.cmd, Dec.cmd);
-	steplog(temp_string,STAR_TRACK_LOG_TYPE);
-	/**************************************************************************/
+		sprintf(temp_string, "Ra.cmd=%s, Dec.cmd=%s", Ra.cmd, Dec.cmd);
+		steplog(temp_string,STAR_TRACK_LOG_TYPE);
+		/**************************************************************************/
 
-	Ra.start_time_mv= Dec.start_time_mv= 1;
-	// First Stage
-	//Move RA/DEC motor with 500Hz for 10sec
-	//BUFFERTIME is added to avoid gap between two different speeds
-	sprintf(Ra.cmd, "RA %s FREQUENCY %d %d %d 0 0 0 0",Ra.dir,Ra.start_time_mv, FAST_SPEED_TIME1+BUFFERTIME, FAST_SPEED_REGISTER1);
-	sprintf(Dec.cmd, "DEC %s FREQUENCY %d %d %d 0 0 0 0",Dec.dir,Dec.start_time_mv, FAST_SPEED_TIME1+BUFFERTIME, FAST_SPEED_REGISTER1);
+		Ra.start_time_mv= Dec.start_time_mv= 1;
+		// First Stage
+		//Move RA/DEC motor with 500Hz for 10sec
+		//BUFFERTIME is added to avoid gap between two different speeds
+		sprintf(Ra.cmd, "RA %s FREQUENCY %d %d %d 0 0 0 0",Ra.dir,Ra.start_time_mv, FAST_SPEED_TIME1+BUFFERTIME, FAST_SPEED_REGISTER1);
+		sprintf(Dec.cmd, "DEC %s FREQUENCY %d %d %d 0 0 0 0",Dec.dir,Dec.start_time_mv, FAST_SPEED_TIME1+BUFFERTIME, FAST_SPEED_REGISTER1);
 
-	sprintf(temp_string, 
-		"Waiting for %d sec, until %4d/%02d/%02d %02d:%02d:%02d, to send commands to DSP", 
-		DELAY_COMPUTE,lt.yr, lt.mon, lt.day, lt.hr, lt.min, lt.sec);
-	steplog(temp_string,STAR_TRACK_LOG_TYPE);
+		sprintf(temp_string, 
+			"Waiting for %d sec, until %4d/%02d/%02d %02d:%02d:%02d, to send commands to DSP", 
+			DELAY_COMPUTE,lt.yr, lt.mon, lt.day, lt.hr, lt.min, lt.sec);
+		steplog(temp_string,STAR_TRACK_LOG_TYPE);
 #ifndef DEBUG
-	// synchronize with the time at which variables are computed
-	short_timing(curtime+ DELAY_COMPUTE);
+		// synchronize with the time at which variables are computed
+		short_timing(curtime+ DELAY_COMPUTE);
 #endif
-	p_tat_info->obs_info.status = Pursuing;
-	//Send commands to DSP
+		p_tat_info->obs_info.status = Pursuing;
+		//Send commands to DSP
 #ifndef DEBUG
-	fout=fopen(DSP_CMD_FILENAME, "w");
-	fprintf(fout, "%s\n%s\n", Ra.cmd, Dec.cmd);
-	fclose(fout);
+		fout=fopen(DSP_CMD_FILENAME, "w");
+		fprintf(fout, "%s\n%s\n", Ra.cmd, Dec.cmd);
+		fclose(fout);
 #endif
-	sprintf(temp_string, "Ra.cmd=%s, Dec.cmd=%s", Ra.cmd, Dec.cmd);
-	steplog(temp_string,STAR_TRACK_LOG_TYPE);
+		sprintf(temp_string, "Ra.cmd=%s, Dec.cmd=%s", Ra.cmd, Dec.cmd);
+		steplog(temp_string,STAR_TRACK_LOG_TYPE);
 
 
-	// Second Stage
-	//Move RA/DEC motor with 2kHz for Ra.time_mv2 and Dec.time_mv2
-	sprintf(Ra.cmd ,"RA %s FREQUENCY %d %d %d 0 0 0 0",Ra.dir,Ra.start_time_mv, Ra.time_mv2+BUFFERTIME, FAST_SPEED_REGISTER2);
-	//BUFFERTIME is NOT added for DEC since it stops at the end of 2nd stage, instead BUFFERTIME_2 is added to make sure DEC has enough pulse number
-	sprintf(Dec.cmd ,"DEC %s FREQUENCY %d %d %d 0 0 0 0",Dec.dir, Dec.start_time_mv, Dec.time_mv2+BUFFERTIME_2, FAST_SPEED_REGISTER2);
+		// Second Stage
+		//Move RA/DEC motor with 2kHz for Ra.time_mv2 and Dec.time_mv2
+		sprintf(Ra.cmd ,"RA %s FREQUENCY %d %d %d 0 0 0 0",Ra.dir,Ra.start_time_mv, Ra.time_mv2+BUFFERTIME, FAST_SPEED_REGISTER2);
+		//BUFFERTIME is NOT added for DEC since it stops at the end of 2nd stage, instead BUFFERTIME_2 is added to make sure DEC has enough pulse number
+		sprintf(Dec.cmd ,"DEC %s FREQUENCY %d %d %d 0 0 0 0",Dec.dir, Dec.start_time_mv, Dec.time_mv2+BUFFERTIME_2, FAST_SPEED_REGISTER2);
 #ifndef DEBUG
-	// synchronize with the time at which variables are computed
-	short_timing(curtime+ DELAY_COMPUTE + FAST_SPEED_TIME1);
+		// synchronize with the time at which variables are computed
+		short_timing(curtime+ DELAY_COMPUTE + FAST_SPEED_TIME1);
 
-	//Send commands to DSP
-	fout=fopen(DSP_CMD_FILENAME, "w");
-	fprintf(fout, "%s\n%s\n", Ra.cmd, Dec.cmd);
-	fclose(fout);
+		//Send commands to DSP
+		fout=fopen(DSP_CMD_FILENAME, "w");
+		fprintf(fout, "%s\n%s\n", Ra.cmd, Dec.cmd);
+		fclose(fout);
 #endif
-	sprintf(temp_string, "Ra.cmd=%s, Dec.cmd=%s", Ra.cmd, Dec.cmd);
-	steplog(temp_string,STAR_TRACK_LOG_TYPE);
+		sprintf(temp_string, "Ra.cmd=%s, Dec.cmd=%s", Ra.cmd, Dec.cmd);
+		steplog(temp_string,STAR_TRACK_LOG_TYPE);
 
-	// Third Stage
-	//Move RA motor with 1KHz for Ra.time_mv3
-	sprintf(Ra.cmd ,"RA POS FREQUENCY %d %d %d 0 0 0 0", Ra.start_time_mv, Ra.time_mv3+BUFFERTIME, FAST_SPEED_REGISTER3F);
+		// Third Stage
+		//Move RA motor with 1KHz for Ra.time_mv3
+		sprintf(Ra.cmd ,"RA POS FREQUENCY %d %d %d 0 0 0 0", Ra.start_time_mv, Ra.time_mv3+BUFFERTIME, FAST_SPEED_REGISTER3F);
 #ifndef DEBUG
-	// synchronize with the time at which variables are computed
-	short_timing(curtime+ DELAY_COMPUTE + FAST_SPEED_TIME1 + Ra.time_mv2);
-	//Send commands to DSP
-	fout=fopen(DSP_CMD_FILENAME, "w");
-	fprintf(fout, "%s\n", Ra.cmd);
-	fclose(fout);
+		// synchronize with the time at which variables are computed
+		short_timing(curtime+ DELAY_COMPUTE + FAST_SPEED_TIME1 + Ra.time_mv2);
+		//Send commands to DSP
+		fout=fopen(DSP_CMD_FILENAME, "w");
+		fprintf(fout, "%s\n", Ra.cmd);
+		fclose(fout);
 #endif
-	sprintf(temp_string, "Ra.cmd=%s", Ra.cmd); 
-	steplog(temp_string,STAR_TRACK_LOG_TYPE);
-
+		sprintf(temp_string, "Ra.cmd=%s", Ra.cmd); 
+		steplog(temp_string,STAR_TRACK_LOG_TYPE);
+	}
 /*************************************************************************/
 //  end of moving telescope from origin to star
 /*************************************************************************/
@@ -840,8 +831,46 @@ int main(int argc,char* argv[])
 		//In case observer change sequence and reduce N_filter
 		if(p_tat_info->obs_info.N_filters <2) current_seq_step=0;
 	}
-	// Set D and print sth
 	p_tat_info->obs_info.ccd_status=CCD_IDLE;
+	//-------------------------------------------------------------------
+	// Set D after the schedule is finished normally.	
+	// Read input file
+	if((fin1=fopen(TIME_TABLE_FILENAME,"r+"))==NULL){       
+        	sprintf(
+			temp_string, 
+			"ERROR: Could not find input file (%s).",
+			TIME_TABLE_FILENAME
+		);
+        	steplog(temp_string,STAR_TRACK_LOG_TYPE);
+        	return 1;
+	}
+	// Skip header
+	while(!feof(fin1)){       
+        	fgets(buf, BUFFER_SIZE, fin1);
+        	if( !strncmp(buf,"DATA",4)) break;
+	}
+	// After DATA read 3 more lines
+	fgets(buf, BUFFER_SIZE, fin1);
+	fgets(buf, BUFFER_SIZE, fin1);
+	fgets(buf, BUFFER_SIZE, fin1);
+	fposition = (fpos_t *) malloc (sizeof(fpos_t));
+	// Replace the first 'Y' with 'N' in our schedule
+	while(!feof(fin1)){
+		fgetpos(fin1, fposition);
+                fgets(buf, BUFFER_SIZE, fin1);
+		if (!(strcmp(buf, schedule_line))){
+			steplog(buf, STAR_TRACK_LOG_TYPE);		
+			fsetpos(fin1, fposition);
+                	fseek(fin1, 0, SEEK_CUR);
+			fputc('D', fin1);
+			free(fposition);
+			fclose(fin1);
+			break;
+		}
+	}
+	free( fposition);
+	fclose(fin1);
+
 	return 0;
 } // main
 

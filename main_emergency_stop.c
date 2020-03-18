@@ -75,11 +75,13 @@ int main(int argc,char* argv[])
 			fgetpos(fin, fposition);
                         fgets(buf, BUFFER_SIZE, fin);
 			if (buf[0] == 'Y' || buf[0] == 'y'){
-				printf("Gotta\n");
+				steplog(buf, STAR_TRACK_LOG_TYPE);		
 				fsetpos(fin, fposition);
                         	fseek(fin, 0, SEEK_CUR);
 				fputc('N', fin);
-				break;
+				free(fposition);
+				fclose(fin);
+				return 0;
 			}
 		}
 		free( fposition);
@@ -92,7 +94,7 @@ int main(int argc,char* argv[])
 	fclose(cmdFile);
 	
 	step("WARNING: Emergency stop observation now !!");
-	if(input_option == CCD_OFF)
+	if(input_option != CCD_OFF)
 		printf("## CCD will not be turned off ##\n");
 	else if(input_option == CCD_OFF)
 		printf("## CCD will be turned off ##\n");
@@ -104,39 +106,38 @@ int main(int argc,char* argv[])
 	
 	// Turn web cams ON
 	pwr_rx_poweron();
-    /* Often CCD is exposing when sending this command.
-       So, The command may be missed. */
+    	// Often CCD is exposing when sending this command. So, 
+    	// The command may be missed.
 	if(!input_option)
 	{
 		steplog("CCD cooler warm up",AUTO_OBSERVE_LOG_TYPE);
 		ccd_cooler_shutdown();
 	}
 	// Move 6 degree in case the telescope is in origin
-    steplog("Forward Telescope ~3 Degree", AUTO_OBSERVE_LOG_TYPE);
-    ForwardTelescope3Degree();
-    /* Telescope will stop after ForwardTelescope3Degree() */
+    	steplog("Forward Telescope ~3 Degree", AUTO_OBSERVE_LOG_TYPE);
+    	ForwardTelescope3Degree();
+    	/* Telescope will stop after ForwardTelescope3Degree() */
 
-    p_tat_info->obs_info.status = Returning;
-    steplog("Move Telescope to Reference Position", AUTO_OBSERVE_LOG_TYPE);
-    RapidResetTelescope();
-    /* timing in ParkTelescope() */
-    if ( p_tat_info->dsp_info.ra.origin && p_tat_info->dsp_info.dec.origin )
-   	      ClosePart();
-    else
-    {
-		steplog("WARNING: Cannot move Telescope to safe position", AUTO_OBSERVE_LOG_TYPE);
-		printf("Please move Telescope to safe position by hand.\n");
-		printf("And then close enclosure by youself.");
-		exit(1);
-    }
+    	p_tat_info->obs_info.status = Returning;
+    	steplog("Move Telescope to Reference Position", AUTO_OBSERVE_LOG_TYPE);
+    	RapidResetTelescope();
+    	/* timing in ParkTelescope() */
+    	if ( p_tat_info->dsp_info.ra.origin && p_tat_info->dsp_info.dec.origin )
+		ClosePart();
+    	else
+    	{
+    	    	steplog("WARNING: Cannot move Telescope to safe position", AUTO_OBSERVE_LOG_TYPE);
+    	    	printf("Please move Telescope to safe position by hand.\n");
+    	    	printf("And then close enclosure by youself.");
+    	    	exit(1);
+    	}
 
-    steplog("Move Telescope to Safe Position", AUTO_OBSERVE_LOG_TYPE);
-    ForwardTelescope3Degree();
-	
+    	steplog("Move Telescope to Safe Position", AUTO_OBSERVE_LOG_TYPE);
+    	ForwardTelescope3Degree();
 	steplog("Turn part power off", AUTO_OBSERVE_LOG_TYPE);
 	TurnPartPowerOff();
-	
-    /* try */
+    	    
+    	/* try */
 	if(!input_option)
 	{
 		p_tat_info->obs_info.status = STOP;

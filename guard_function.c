@@ -30,6 +30,7 @@ int guard(int type)
 	FILE *fp;
 	weather_info weather;
 	cloud_info cloud;
+	int condition_1, condition_2;
 	int condition;
 	int wind_criterion_time, wind_successive_time;
 	int humidity_criterion_time, humidity_successive_time;
@@ -60,12 +61,18 @@ int guard(int type)
 	rain_criterion_time= DoGetValue("RAIN_CRITERION_TIME");
 	rain_successive_time=0;
 
-	
-    //Check type
+	// Check type
+	// 0: Flat before obseravtion
+	// 1: Observation program
+	// 2: Flat after observation
+	// 3: Dark program
+	// 4: Dark program between observations
 	if(type == 1) DoGetValueString("OBSERVE_PROGRAM", running_program);
 	else if (type ==0 || type ==2) 
 		DoGetValueString("FLAT_PROGRAM", running_program);
 	else if (type == 3)
+		DoGetValueString("DARK_PROGRAM", running_program);
+	else if (type == 4)
 		DoGetValueString("DARK_PROGRAM", running_program);
 	
 	int minute = 0;	/* count to 60 */
@@ -83,7 +90,7 @@ int guard(int type)
 	
 	while(result <= 0)//there isn't a final ouput yet
 	{
-		//First check if there is an emergency command
+		// First check if there is an emergency command
 		if( (fp=fopen(AUTO_CMD_FILENAME,"r")) != NULL)
 		{
 			fscanf(fp,"%s",temp_string);
@@ -115,10 +122,10 @@ int guard(int type)
 			//check if it is time to end the program
 			switch(type)
 			{
-				case 0://before observation
-				case 2://after observation
+				case 0:// Flat before observation
+				case 2:// Flat after observation
 					condition=1;//taking flat
-				//the autoflat changes the ccd status to doing_flat every cycle (less than one minute)
+					//the autoflat changes the ccd status to doing_flat every cycle (less than one minute)
 					if(p_tat_info->obs_info.ccd_status== CCD_FLAT)
 					{
 						flat_freeze_succesive_time++;
@@ -145,10 +152,31 @@ int guard(int type)
 					if(p_tat_info->obs_info.ccd_status== CCD_DARK)
 					{
 						condition=1;//taking flat
-						minute = 0;//to avoid the guard program to check.
+						minute = 0;//to avoid the guard program checking the weather.
 					}
 					else condition =0;
 				break;
+				// TODO
+				case 4:// taking dark between two observations.
+					// Initialize
+					condition_1 = 0;
+					condition_2 = 0;
+					// 1. Time
+					if (diffTime<2) 
+						condition_1 = 0;
+					else 
+						condition_1 = 1;
+					// 2. CCD status
+					if(p_tat_info->obs_info.ccd_status== CCD_DARK)
+						condition_2 = 1;// Continue
+					else 
+						condition_2 =0;
+					// Summary
+					if (condition_1 && condition_2)
+						condition = 1;
+					else
+						condition = 0;
+				break;	
 				default:
 					condition =0;
 				break;
@@ -156,10 +184,13 @@ int guard(int type)
 		}
 		if( condition ) 
 		{
+			// Check the condition every 60 seconds.
 			if ( minute == 60 )
 			{
+				// Reset counter
 				minute = 0;
-				/* get weather condition */
+				//------------------------------------------------------
+				// get weather condition 
 				result = get_weather_condition (&weather);
 				result += get_cloud_condition (&cloud);
 
@@ -173,8 +204,17 @@ int guard(int type)
 						if( weather.humid_out > (float) DoGetValue("HUMIDITY_CRITERION") )
 						{
 							/* high humidity */
-							sprintf(log_text,"WARNING: Current outside humidity %.2f\n", weather.humid_out);
-							sprintf(log_text,"%sHumidity successive time %d",log_text,humidity_successive_time+=60);
+							sprintf(
+								log_text,
+								"WARNING: Current outside humidity %.2f\n",
+								weather.humid_out
+							);
+							sprintf(
+								log_text,
+								"%sHumidity successive time %d",
+								log_text,
+								humidity_successive_time+=60
+							);
 							step(log_text);
 							if( humidity_successive_time >= humidity_criterion_time )
 								result = HUMIDITY_STATUS;
@@ -185,24 +225,38 @@ int guard(int type)
 						/* check wind speed */
 						if( weather.wind_avg > (float) DoGetValue("WIND_CRITERION") )
 						{
-								/* strong wind */
-								sprintf(log_text,"WARNING: Current wind speed %.2f \n",weather.wind_avg);
-								sprintf(log_text,"%sStrong wind successive time %d",log_text,wind_successive_time+=60);
-								step(log_text);
-								if( wind_successive_time >= wind_criterion_time)
-										result = WIND_STATUS;
+							/* strong wind */
+							sprintf(
+								log_text,
+								"WARNING: Current wind speed %.2f \n",
+								weather.wind_avg
+							);
+							sprintf(
+								log_text,
+								"%sStrong wind successive time %d",
+								log_text,
+								wind_successive_time+=60
+							);
+							step(log_text);
+							if( wind_successive_time >= wind_criterion_time)
+								result = WIND_STATUS;
 						}
 						else   /* safe	*/
-								wind_successive_time=0;
+							wind_successive_time=0;
 					}
 					else
 					{
-						sprintf(log_text,"WARNING: No data from console successive time %d",weather_data_break_successive_time+=60);
+						sprintf(
+							log_text,
+							"WARNING: No data from console successive time %d",
+							weather_data_break_successive_time+=60
+						);
 						step(log_text);
-						if(weather_data_break_successive_time >= weather_data_break_criterion_time)
-									result = WEATHER_DATA_BREAK;
+						if (weather_data_break_successive_time >= weather_data_break_criterion_time)
+							result = WEATHER_DATA_BREAK;
 					}
-					//////CHECK CLOUD DATA
+					//--------------------------------------------------------
+					// CHECK CLOUD DATA
 					if(time(0)-cloud.timekey <= 120)
 					{
 						cloud_data_break_successive_time=0;
@@ -218,7 +272,7 @@ int guard(int type)
 						}
 						else   /* safe  */
 						{
-// 			printf("CLARITY=%.2f\n",cloud.clarity);
+							// printf("CLARITY=%.2f\n",cloud.clarity);
 							cloud_successive_time=0;
 						}
 						/* check rain */
@@ -233,13 +287,17 @@ int guard(int type)
 						}
 						else   /* safe  */
 						{
-//   			printf("RAIN=%.2f\n",cloud.rain);
+							// printf("RAIN=%.2f\n",cloud.rain);
 							rain_successive_time=0;
 						}
 					}
 					else
 					{
-						sprintf(log_text,"WARNING: No data from cloud sensor successive time %d",cloud_data_break_successive_time+=60);
+						sprintf(
+							log_text,
+							"WARNING: No data from cloud sensor successive time %d",
+							cloud_data_break_successive_time+=60
+						);
 						step(log_text);
 						if(cloud_data_break_successive_time >= cloud_data_break_criterion_time)
 							result = CLOUD_DATA_BREAK;
@@ -247,7 +305,11 @@ int guard(int type)
 				}
 				else
 				{
-					sprintf(log_text,"WARNING: Database error successive time %d",weather_unlink_time+=60);
+					sprintf(
+						log_text,
+						"WARNING: Database error successive time %d",
+						weather_unlink_time+=60
+					);
 					step(log_text);
 					if(weather_unlink_time >= weather_unlink_criterion_time)
 						result = GET_WEATHER_FAILED;
@@ -259,13 +321,13 @@ int guard(int type)
 				fclose(fp);
 				remove( AUTO_CMD_FILENAME);
 				if(!strcmp(BREAK_ALL_OBSERVATION ,temp_string))
-						result = EMERGENCY_STATUS;
+					result = EMERGENCY_STATUS;
 				else if(!strcmp(DO_NEXT_OBSERVATION ,temp_string))
-						result = NEXT_OBSERVATION;
+					result = NEXT_OBSERVATION;
 			}
 
 			
-			if (type == 1) //star track is running
+			if (type == 1 || type == 4) //star track is running
 			{
 				if(prev_dsp_count>0 && //only if prev_dsp is positive
 					(p_tat_info->dsp_info.time_count - prev_dsp_count) > DSP_COUNT_CRITERION)
@@ -285,9 +347,9 @@ int guard(int type)
 			sleep(1);
 			minute++;
 		}
-		else
+		else if ( !condition )
 		{
-			if (type == 1)
+			if (type == 1 || type == 4)
 			{
 				if(curTime==p_tat_info->obs_info.end_time)
 					result = NORMAL_STATUS;
@@ -302,7 +364,7 @@ int guard(int type)
 						usleep(10000);
 				}
 			}
-			else// if(type == 0 || type ==2 || type == 3)
+			else// if(type == 0 || type ==2 || type == 3 || type == 4)
 			{
 				p_tat_info->obs_info.ccd_status = CCD_IDLE;//ccd idle
 				result = NORMAL_STATUS;
@@ -321,55 +383,55 @@ int guard(int type)
 	switch( result )
 	{
 		case WIND_STATUS:
-            sprintf(log_text,"WARNING: Strong wind now !!!");
+			sprintf(log_text,"WARNING: Strong wind now !!!");
 		break;
 
 		case HUMIDITY_STATUS:
-            sprintf(log_text,"WARNING: High humidity detected !!!");
+			sprintf(log_text,"WARNING: High humidity detected !!!");
 		break;
 		
 		case RAIN_STATUS:
-            sprintf(log_text,"WARNING: It is raining now !!!");
+			sprintf(log_text,"WARNING: It is raining now !!!");
 		break;
 		
 		case CLOUD_STATUS:
-            sprintf(log_text,"WARNING: It is too cloudy now !!!");
+			sprintf(log_text,"WARNING: It is too cloudy now !!!");
 		break;
 		case ERROR_STATUS:
-            sprintf(log_text,"ERROR: guard( ) encounter a problem!!!");
+			sprintf(log_text,"ERROR: guard( ) encounter a problem!!!");
 		break;
 
 		case WEATHER_DATA_BREAK:
-            sprintf(log_text,"ERROR: No weather data !!!");
+			sprintf(log_text,"ERROR: No weather data !!!");
 		break;
 		
 		case CLOUD_DATA_BREAK:
-            sprintf(log_text,"ERROR: No cloud sensor data !!!");
+			sprintf(log_text,"ERROR: No cloud sensor data !!!");
 		break;
 
 		case GET_WEATHER_FAILED:
-            sprintf(log_text,"ERROR: Weather or cloud DB failed !!!");
+			sprintf(log_text,"ERROR: Weather or cloud DB failed !!!");
 		break;
 		case NORMAL_STATUS:
 			if(type ==0 || type ==2)
-                sprintf(log_text,"### Normal finish taking flat fielding");
-			else if(type == 1 || type ==4)
-                sprintf(log_text,"### Normal finish observation");
-			else if (type ==3)
-                sprintf(log_text,"### Normal finish taking dark current");
+				sprintf(log_text,"### Normal finish taking flat fielding");
+			else if (type == 1)
+                		sprintf(log_text,"### Normal finish observation");
+			else if (type == 3 || type == 4)
+                		sprintf(log_text,"### Normal finish taking dark current");
 			else
-                sprintf(log_text,"### Normal finish");
+                		sprintf(log_text,"### Normal finish");
 
 		break;
 		case NEXT_OBSERVATION:
-			if(type == 1 || type ==4)
-                sprintf(log_text,"WARNING: Observer requested to do next observation");
+			if(type == 1)
+                		sprintf(log_text,"WARNING: Observer requested to do next observation");
 			else
-                sprintf(log_text,"WARNING: Observer requested to move to next step");
+                		sprintf(log_text,"WARNING: Observer requested to move to next step");
 
 		break;
 		case EMERGENCY_STATUS:
-            sprintf(log_text,"WARNING: Observer has stopped the auto observation");
+            		sprintf(log_text,"WARNING: Observer has stopped the auto observation");
 		break;
 		default:
 			result = ERROR_STATUS;

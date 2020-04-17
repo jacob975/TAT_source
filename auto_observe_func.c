@@ -342,6 +342,11 @@ int check_multiple_observation(char *flat_filter_option, char *dark_exp_option)
 int set_current_observation(char *flat_filter_option, char *dark_exp_option)
 {
 	//--------------------------------------------------
+	// 0:  Failed
+	// 1:  One observable target found
+	// -1: Dark mode, taking darks at home.
+	// -2: Filled up mode, taking darks between observations.
+	//--------------------------------------------------
 	// Declaration
 	int i,ra_h,ra_m,ra_s;
 	int dec_d,dec_m,dec_s;
@@ -500,7 +505,6 @@ int set_current_observation(char *flat_filter_option, char *dark_exp_option)
 		//-------------------------------------------------------------
 		// It is not observing time, but there is an observation later
 		// Take darks until the begining of next observation
-		// The following scripts has bugs
 		else if(observable_later){
 			time (&rawtime);
 			ptr_time = localtime(&rawtime);

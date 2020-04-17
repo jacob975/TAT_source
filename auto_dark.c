@@ -3,6 +3,18 @@
 gcc auto_dark.c getdate.c ccd_func.c ppc_func.c common.c tat.info.c -lncurses -lm
 */
 
+// TODO
+// Add a new arguement "mode", which is used to indicate why we run this program.
+// 	-1 means run by schedule, this program will slew home and take dark, 
+//  	then update the schedule status after the process finished.
+//  
+//  	-2 means take darks in between two observations, this program will NOT slew home, 
+//  	NEITHER update the schedule status after the process finished.
+//
+//  	0 means manually run it, this program will slew home and take dark, 
+//  	but not update the schedule status after the process finished.
+
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>

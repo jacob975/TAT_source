@@ -294,10 +294,12 @@ int main(int argc ,char *argv[])
 				//SafeResetTelescope();
 			}
 			//-------------------------------------------------------------------
+			// ``observation_updated"
 			// Take Exposure or Dark:
 			//  1: Exposure
-			// -1: Dark using shm
-			// -2: Dark using string
+			//  0: Failed
+			// -1: Dark mode, taking dark at home. 
+			// -2: Filled up mode, taking dark between two observations.
 			
 			// Take exposures
 			sprintf(temp_string,"Observation_updated: %d",observation_updated);
@@ -377,26 +379,28 @@ int main(int argc ,char *argv[])
 			// TODO
 			// Currently, the auto_dark program is not finished.
 			// It will take 4000 darks in one command, which is not able to complete.
-			// We should control the number of exposure between observations.
-			// 
-			// Also, the dark current schedule will not be updated by auto_dark program,
-			// after all the dark current are taken already.
-			// Take dark current
+			// 1. We should control the number of exposure between observations.
+			// 2. Guard program should works.
 			else if(observation_updated < 0) {
 				//-----------------------------------------------------------------
 				// Call dark program
 				steplog("### Taking Darks", AUTO_OBSERVE_LOG_TYPE);
 				p_tat_info->obs_info.FOV = FOV_CORRECT; //
-				ForwardTelescope3Degree(); //move telescope away from HS
+				// Debug
+				// ForwardTelescope3Degree(); //move telescope away from HS
 				steplog("Call dark program", AUTO_OBSERVE_LOG_TYPE);
-				if(observation_updated == -1)
+				// Take darks using the exposure time in SHM.
+				if(observation_updated == -1){
 					sprintf(
 						system_cmd,
 						"%s%s 0 4000 &",
 						APP_PATH,
 						dark_program
 					);
-				else
+					guard_option=3;
+				}
+				// Take darks using given arguements on exposure time
+				else if (observation_updated == -2){
 					sprintf(
 						system_cmd,
 						"%s%s %s 4000 &",
@@ -404,17 +408,23 @@ int main(int argc ,char *argv[])
 						dark_program,
 						dark_exp_option
 					);
-					
+					guard_option=4;
+				}	
 				system(system_cmd);
 				steplog(system_cmd, AUTO_OBSERVE_LOG_TYPE);
 				//for killing the program
-				guard_option=3;
 				sprintf(system_cmd,"killall -9 %s",dark_program);
 				previous_RA = previous_DEC=-1;
-				p_tat_info->obs_info.ccd_status = CCD_DARK;//3=taking dark
+				p_tat_info->obs_info.ccd_status = CCD_DARK;
 			}
 			//Wait for end time
 			steplog("Waiting for observing end time", AUTO_OBSERVE_LOG_TYPE);
+			// Guard option
+			// 0: Flat before observation
+			// 1: Observation
+			// 2: Flat after observation
+			// 3: Dark and slewing home
+			// 4: Dark between observations
 			wait_result = guard(guard_option);
 			// ++++++ Break observation program ++++++++
 			step("End of observation. Break observing program.");
@@ -468,13 +478,13 @@ int main(int argc ,char *argv[])
 			}
 			else 
 			{
-	// 			send_cmd2ctl("ccddaemon restart");
+				// send_cmd2ctl("ccddaemon restart");
 				steplog("Take flat field after observation", AUTO_OBSERVE_LOG_TYPE);
 				steplog("Moving Telescope to Home Position", AUTO_OBSERVE_LOG_TYPE);
 				p_tat_info->obs_info.status = Returning;
 				// Debug
 				//SafeResetTelescope();
-	// 			ccd_cooler_on(set_point);
+				// ccd_cooler_on(set_point);
 				
 				//////Call The Flat function //////////
 				wait_flat= take_flat_process(2,flat_filter_options);

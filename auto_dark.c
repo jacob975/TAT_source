@@ -25,7 +25,7 @@ gcc auto_dark.c getdate.c ccd_func.c ppc_func.c common.c tat.info.c -lncurses -l
 
 #define TEMP_TOLERANCE 2
 #define MAX_EXP_TIMES 50
-
+#define BUFFER_SIZE 512
 st_tat_info *p_tat_info;
 
 void do_dark(int *exp_time,int Nexp, char *date_string,int N_cycles);
@@ -36,6 +36,7 @@ int main(int argc, char* argv[])
 {
 	int i,N_cycles,Nexp, exp_time[MAX_EXP_TIMES];
 	char date_string[50],command[200],temp_string[200];
+	char given_exp_time[200], given_num_exp[50], given_schedule[200];
 	DATE lt;
 
 	/*get shared memory pointer*/
@@ -47,14 +48,17 @@ int main(int argc, char* argv[])
 	{
 		printf ("\n************************************************************************************");
 		printf ("\nUsage: %s [exposure times][number of each exposure]",argv[0]);
-		printf ("\n*** Note: 'exposure times' = 0, use the exposure times in the shared memory\n");
-		printf ("\n*** Note2: 'exposure times' could be several integers serparated by commas and no spaces:\n\t Example: %s 200,220,110 10\n",argv[0]);
+		printf ("\n*** Note: 'exposure times' = 0, use the exposure times in the shared memory\n and also the schedule line\n");
+		printf ("\n*** Note2: 'exposure times' could be several integers serparated by commas and no spaces:\n");
+		printf ("\n\t Example: %s 200,220,110 10\n",argv[0]);
 		printf ("\n***********************************************************************************\n");
 		p_tat_info->obs_info.ccd_status = CCD_IDLE;//CCD idle
 		return 1;
 	}
-
-	Nexp=get_exp_times(argv[1],exp_time);
+	strcpy(given_exp_time, argv[1]);
+	strcpy(given_num_exp, argv[2]);
+	//------------------------------------------------------
+	Nexp=get_exp_times(given_exp_time, exp_time);
 	if(!Nexp) 
 	{
 		steplog("ERROR: No acceptable exposure times!!",AUTO_OBSERVE_LOG_TYPE);
@@ -83,12 +87,15 @@ int main(int argc, char* argv[])
 	
 	step(temp_string);
 	
-	N_cycles = atoi(argv[2]);
+	N_cycles = atoi(given_num_exp);
 
 	if(N_cycles<1 || N_cycles > 5000)
 	{
-		sprintf(temp_string,"ERROR: Incorrect number of total images (%d), it must be 0 < N < 5000",
-				N_cycles);
+		sprintf(
+			temp_string,
+			"ERROR: Incorrect number of total images (%d), it must be 0 < N < 5000",
+			N_cycles
+		);
 		steplog(temp_string,AUTO_OBSERVE_LOG_TYPE);
 		p_tat_info->obs_info.ccd_status = CCD_IDLE;//CCD idle
 		return 1;
@@ -130,10 +137,25 @@ void do_dark(int *exp_time,int Nexp, char *date_string,int N_cycles)
 		if(counter>=Nexp) counter=0;
 		
 		lt= getSystemTime();//function in date.c
-		sprintf(date2_string, "%02d%02d%02d_%02d%02d%02d",
-				lt.yr-2000, lt.mon, lt.day,lt.hr,lt.min,lt.sec);//080530_033211
-		sprintf(image_filename,"%s/%s/%s%sEx%d.fit",CALIBRATE_PATH, date_string, 
-				prefix_name, date2_string, exp_time[counter]);
+		sprintf(
+			date2_string, 
+			"%02d%02d%02d_%02d%02d%02d",
+			lt.yr-2000, 
+			lt.mon, 
+			lt.day,
+			lt.hr,
+			lt.min,
+			lt.sec
+		);//080530_033211
+		sprintf(
+			image_filename,
+			"%s/%s/%s%sEx%d.fit",
+			CALIBRATE_PATH, 
+			date_string, 
+			prefix_name, 
+			date2_string, 
+			exp_time[counter]
+		);
 		sprintf(temp_string,"********\n Image %d: \n%s\n", image_number+1, image_filename);
 		step(temp_string);
 		// creates file for ccd daemon to read

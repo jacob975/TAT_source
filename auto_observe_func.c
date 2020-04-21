@@ -339,7 +339,7 @@ int check_multiple_observation(char *flat_filter_option, char *dark_exp_option)
 ///////////////////////////////////////////////////////////////
 // Assign the information of the next target into shared memory.
 ///////////////////////////////////////////////////////////////
-int set_current_observation(char *flat_filter_option, char *dark_exp_option)
+int set_current_observation(char *flat_filter_option, char *dark_exp_option, char *schedule_line)
 {
 	//--------------------------------------------------
 	// 0:  Failed
@@ -497,10 +497,14 @@ int set_current_observation(char *flat_filter_option, char *dark_exp_option)
 				dark_exp_option
 			);
 			
-			if(ra_h ==0 && ra_m ==0 && ra_s ==0 && dec_d ==0 && dec_m ==0 && dec_s ==0)
+			if(ra_h ==0 && ra_m ==0 && ra_s ==0 && dec_d ==0 && dec_m ==0 && dec_s ==0){
+				strcpy(schedule_line, buf); 
 				return -1;
-			else 
+			}
+			else{ 
+				strcpy(schedule_line, buf); 
 				return 1;
+			}
 		}
 		//-------------------------------------------------------------
 		// It is not observing time, but there is an observation later

@@ -854,7 +854,7 @@ int main(int argc,char* argv[])
 	fgets(buf, BUFFER_SIZE, fin1);
 	fgets(buf, BUFFER_SIZE, fin1);
 	fposition = (fpos_t *) malloc (sizeof(fpos_t));
-	// Replace the first 'Y' with 'N' in our schedule
+	// Replace the first 'Y' with 'D' in our schedule
 	while(!feof(fin1)){
 		fgetpos(fin1, fposition);
                 fgets(buf, BUFFER_SIZE, fin1);

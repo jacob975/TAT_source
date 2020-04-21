@@ -149,14 +149,27 @@ int guard(int type)
 					else condition = 1;//Time difference > 2
 				break;
 				case 3://taking dark
-					if(p_tat_info->obs_info.ccd_status== CCD_DARK)
-					{
-						condition=1;//taking flat
+					// Initialize
+					condition_1 = 0;
+					condition_2 = 0;
+					// 1. Time
+					if (diffTime<2) 
+						condition_1 = 0;
+					else 
+						condition_1 = 1;
+					// 2. CCD status
+					if(p_tat_info->obs_info.ccd_status== CCD_DARK){
+						condition_2 = 1;// Continue
 						minute = 0;//to avoid the guard program checking the weather.
 					}
-					else condition =0;
-				break;
-				// TODO
+					else 
+						condition_2 =0;
+					// Summary
+					if (condition_1 && condition_2)
+						condition = 1;
+					else
+						condition = 0;
+				break;	
 				case 4:// taking dark between two observations.
 					// Initialize
 					condition_1 = 0;

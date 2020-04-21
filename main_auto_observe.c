@@ -40,6 +40,7 @@ int main(int argc ,char *argv[])
 	char temp_string[BUFSIZ];
 	char system_cmd[BUFSIZ],observe_program[BUFSIZ],dark_program[BUFSIZ];
 	char backup_program[BUFSIZ];
+	char schedule_line[BUFSIZ];
 	int i, countdown,try, wait_result =0, wait_temp = 0, star_rise,wait_flat;
 	int enclosure_open_time,use_report;
 	int N_obs,obs_count,N_input_error,observation_updated,guard_option;
@@ -269,7 +270,8 @@ int main(int argc ,char *argv[])
 			observation_updated = 0;
 			observation_updated = set_current_observation(
 				flat_filter_options,
-				dark_exp_option
+				dark_exp_option,
+				schedule_line
 			);
 			if(observation_updated == 0){
 				step("### No more observations tonight");
@@ -386,20 +388,21 @@ int main(int argc ,char *argv[])
 				// Call dark program
 				steplog("### Taking Darks", AUTO_OBSERVE_LOG_TYPE);
 				p_tat_info->obs_info.FOV = FOV_CORRECT; //
-				// Debug
-				// ForwardTelescope3Degree(); //move telescope away from HS
 				steplog("Call dark program", AUTO_OBSERVE_LOG_TYPE);
 				// Take darks using the exposure time in SHM.
 				if(observation_updated == -1){
+					// Debug
+					// ForwardTelescope3Degree(); //move telescope away from HS
 					sprintf(
 						system_cmd,
 						"%s%s 0 4000 &",
 						APP_PATH,
 						dark_program
 					);
+					step(system_cmd);
 					guard_option=3;
 				}
-				// Take darks using given arguements on exposure time
+				// Take darks using given arguements about exposure time
 				else if (observation_updated == -2){
 					sprintf(
 						system_cmd,

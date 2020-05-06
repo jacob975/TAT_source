@@ -358,7 +358,7 @@ int set_current_observation(char *flat_filter_option, char *dark_exp_option, cha
 	struct tm *ptr_time;
 	time_t rawtime;
 	fpos_t *fposition;
-	int observable = 0, observable_later = 0, last_noon_status = 0;
+	int observable = 0, observable_later = 0, observable_future = 0, last_noon_status = 0;
 	//--------------------------------------------------
 	// Load the observation schedule
 	if( ( fp=fopen(TIME_TABLE_FILENAME, "r+") ) == NULL)
@@ -440,14 +440,16 @@ int set_current_observation(char *flat_filter_option, char *dark_exp_option, cha
 		// 2. end time not pass yet.
 		// 3. In start time 
 		observable = check_observable_now(buf);
-		observable_later = 0;
 		observable_later = 
 			(open_flag[0] == 'Y' || open_flag[0] == 'y') &&
 			begin_date.timestamp >= now.timestamp &&
 			begin_date.timestamp <= next_noon.timestamp;
+		observable_future = 
+			(open_flag[0] == 'Y' || open_flag[0] == 'y') &&
+			begin_date.timestamp >= now.timestamp;
 		//-----------------------------------------------------------------
 		// Skip this target if not observable
-		if (!(observable) && !(observable_later)){ 
+		if (!(observable) && !(observable_future)){ 
 			// CHANGE THE FLAG
 			fsetpos(fp, fposition);
 			fseek(fp, 0, SEEK_CUR);

@@ -172,8 +172,8 @@ int main(int argc ,char *argv[])
 		ccd_takeimage(temp_string, 2, 1, 1);
 
 		//	1. Reset the telescope for observation
-		/*Debug
-		//SafeResetTelescope();
+		/* Debug */
+		SafeResetTelescope();
 		//	2. Unlock enclosure
 		//	3. Open enclosure and ? Reset RF
 		try =0;
@@ -195,7 +195,7 @@ int main(int argc ,char *argv[])
 				return 1;
 			}
 		}while(p_tat_info->dsp_info.enc.closed_ls);
-		*/
+		/* upto here. */
 
 		//--------------------------------------------------------------------------
 		// Check for Multi-Observations
@@ -253,7 +253,7 @@ int main(int argc ,char *argv[])
 				steplog("Reset Telescope", AUTO_OBSERVE_LOG_TYPE);
 				p_tat_info->obs_info.status = Returning;
 				// Debug
-				//SafeResetTelescope();
+				SafeResetTelescope();
 				ccd_cooler_on(set_point);
 			} // if (flat before observation)
 		}
@@ -293,7 +293,7 @@ int main(int argc ,char *argv[])
 			){
 				p_tat_info->obs_info.status = Returning;
 				// Debug
-				//SafeResetTelescope();
+				SafeResetTelescope();
 			}
 			//-------------------------------------------------------------------
 			// ``observation_updated"
@@ -392,7 +392,7 @@ int main(int argc ,char *argv[])
 				// Take darks using the exposure time in SHM.
 				if(observation_updated == -1){
 					// Debug
-					// ForwardTelescope3Degree(); //move telescope away from HS
+					ForwardTelescope3Degree(); //move telescope away from HS
 					sprintf(
 						system_cmd,
 						"%s%s 0 4000 &",
@@ -486,8 +486,8 @@ int main(int argc ,char *argv[])
 				steplog("Moving Telescope to Home Position", AUTO_OBSERVE_LOG_TYPE);
 				p_tat_info->obs_info.status = Returning;
 				// Debug
-				//SafeResetTelescope();
-				// ccd_cooler_on(set_point);
+				SafeResetTelescope();
+				ccd_cooler_on(set_point);
 				
 				//////Call The Flat function //////////
 				wait_flat= take_flat_process(2,flat_filter_options);
@@ -551,20 +551,22 @@ void finish_observation(char *dark_program,char * dark_exp_option,int wait_resul
 	if( p_tat_info->dsp_info.dec.origin || p_tat_info->dsp_info.ra.origin)
 	{
 		steplog("Forward Telescope 3 degree", AUTO_OBSERVE_LOG_TYPE);
+		// Debug
 		ForwardTelescope3Degree();
 	}
-    //CLOSE ENCLOSURE and reset telescope
+	//CLOSE ENCLOSURE and reset telescope
 	steplog("Moving telescope to Home position and closing enclosure", AUTO_OBSERVE_LOG_TYPE);
 	// Debug
-	//SafeResetTelescope(); //Send telescope to home position first
+	SafeResetTelescope(); //Send telescope to home position first
 	ClosePart();
-
-    //shutdown the CCD if weather problem
+	
+	//shutdown the CCD if weather problem
 	if(wait_result != NORMAL_STATUS && wait_result != EMERGENCY_STATUS)
 		ccd_cooler_shutdown();
 	
 	/*timing in ParkTelescope()*/
 	steplog("Park Telescope ", AUTO_OBSERVE_LOG_TYPE);
+	// Debug
 	ForwardTelescope3Degree();
 
 	steplog("Turn all power off except CCD power and Main power", AUTO_OBSERVE_LOG_TYPE);
@@ -576,10 +578,10 @@ void finish_observation(char *dark_program,char * dark_exp_option,int wait_resul
 		pwr_rx_poweroff();
 		
 		// GET FLAT EXPOSURE TIME and ADD to the dark_exp_option
-// 		flat_time = DoGetValue("FLAT_EXPOSURE_TIME");
-// 		sprintf(dark_exp_option,"%d,%s",flat_time,dark_exp_option);
+		//flat_time = DoGetValue("FLAT_EXPOSURE_TIME");
+		//sprintf(dark_exp_option,"%d,%s",flat_time,dark_exp_option);
 
-// 		TAKE DARK CURRENT
+		// TAKE DARK CURRENT
 		dark_number = DoGetValue("DARK_NUMBER");
 		steplog("Call take dark current program", AUTO_OBSERVE_LOG_TYPE);
 		sprintf(system_cmd,"%s%s %s %d &",APP_PATH,dark_program,
@@ -590,7 +592,8 @@ void finish_observation(char *dark_program,char * dark_exp_option,int wait_resul
 		p_tat_info->obs_info.ccd_status = CCD_DARK;//dark current
 		p_tat_info->obs_info.status = Darking;
 
-	/////////////////wait till dark current ends
+		//---------------------------------------------------------
+		// wait till dark current ends
 		while(p_tat_info->obs_info.ccd_status==CCD_DARK) sleep(1);
 
 		////kill the auto_dark program just in case////
